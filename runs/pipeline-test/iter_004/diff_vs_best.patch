@@ -1,0 +1,11 @@
+--- iter_000/algorithm.py (best)
++++ iter_004/algorithm.py
+@@ -86,7 +86,7 @@
+ 
+ def get_model():
+     """Return Barlow Twins model."""
+-    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
++    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=1024)
+ 
+ 
+ def get_training_config():

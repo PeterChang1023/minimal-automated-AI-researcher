@@ -1,0 +1,1 @@
+SMOKE_FAIL: projections shape (8, 1024) != (8, 2048); the official script uses embedding_dim=2048

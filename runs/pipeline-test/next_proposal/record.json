@@ -1,0 +1,27 @@
+{
+  "kind": "next_proposal",
+  "time": "2026-11-13T11:49:52+00:00",
+  "status": "proposed_not_executed",
+  "llm": {
+    "backend": "mock",
+    "model": "mock",
+    "seconds": 0.0
+  },
+  "based_on_history_iters": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "error": null,
+  "hypothesis": "Changing the Barlow Twins off-diagonal weight to 3.9e-3 improves accuracy.",
+  "rationale": "mock backend: random hyperparameter perturbation for pipeline testing",
+  "expected_effect": "+0.5% val acc",
+  "change_summary": "lambda_param -> 3.9e-3",
+  "static_problems": []
+}

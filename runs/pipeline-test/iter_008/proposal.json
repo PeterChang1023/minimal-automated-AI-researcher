@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Changing the Barlow Twins off-diagonal weight to 1e-2 improves accuracy.",
+  "rationale": "mock backend: random hyperparameter perturbation for pipeline testing",
+  "expected_effect": "+0.5% val acc",
+  "change_summary": "lambda_param -> 1e-2"
+}

@@ -1,0 +1,4 @@
+/tmp/claude-0/air-work/pipeline-test/iter_003/smoke_check.py:86: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  print(json.dumps({"smoke_ok": True, "n_params": n_params, "loss": float(loss),
+{"smoke_ok": true, "n_params": 20620352, "loss": 8574.033203125, "candidate_config": {"pretrain_epochs": 130, "linear_eval_epochs": 100, "batch_size": 512, "lr": 0.4, "weight_decay": 0.0001, "lambda_param": 0.01, "linear_lr": 0.1, "linear_batch_size": 256}}
