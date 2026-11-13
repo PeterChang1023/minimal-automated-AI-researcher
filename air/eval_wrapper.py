@@ -29,7 +29,9 @@ def main():
     args = ap.parse_args()
 
     with open(args.budget) as f:
-        overrides = json.load(f)["config_overrides"]
+        budget = json.load(f)
+    overrides = budget["config_overrides"]
+    seed = budget.get("pretrain_seed")  # None = official set_seed(42); only used by scripts/seed_check.py
 
     import algorithm  # the candidate's code
 
@@ -53,6 +55,14 @@ def main():
     print(f"[harness] effective config (after budget overrides): {effective}", flush=True)
 
     import train_eval_baseline as official
+
+    if seed is not None:
+        # Robustness check only (never used by the selection loop): replace the global
+        # seed set at the start of the official main(). Split seeds and the linear-probe
+        # seed are separate in the official code and stay unchanged.
+        _orig_set_seed = official.set_seed
+        official.set_seed = lambda _s=42: _orig_set_seed(int(seed))
+        print(f"[harness] pretrain seed override: {seed} (robustness check)", flush=True)
 
     sys.argv = ["train_eval_baseline.py", "--split", args.split]
     t0 = time.time()

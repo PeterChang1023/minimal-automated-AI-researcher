@@ -55,6 +55,9 @@ python -m air.loop --run-name main --max-iters 1 --propose-next
 # more iterations later (same run, same budget -> comparable)
 python -m air.loop --run-name main --max-iters 5 --propose-next
 
+# Seed robustness check (outside the selection loop): baseline + best code with extra seeds
+python scripts/seed_check.py runs/main --seeds 1 2   # ~4 x 7 min -> runs/main/seed_check/summary.json
+
 # Part 3 – visualization from the real logs
 python scripts/visualize.py runs/main        # -> runs/main/viz/progress.png, trace.html
 

@@ -81,7 +81,10 @@ class Executor:
         shutil.copy2(TASK_DIR / "split_config.json", sb / "split_config.json")
         shutil.copy2(PKG / "eval_wrapper.py", sb / "eval_wrapper.py")
         shutil.copy2(PKG / "smoke_check.py", sb / "smoke_check.py")
-        (sb / "budget.json").write_text(json.dumps({"config_overrides": self.budget["config_overrides"]}, indent=2))
+        b = {"config_overrides": self.budget["config_overrides"]}
+        if self.budget.get("pretrain_seed") is not None:
+            b["pretrain_seed"] = self.budget["pretrain_seed"]
+        (sb / "budget.json").write_text(json.dumps(b, indent=2))
         os.symlink(self.data_root.resolve(), sb / "data")
         return sb
 
