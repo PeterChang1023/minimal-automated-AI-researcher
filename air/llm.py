@@ -1,6 +1,7 @@
 """Pluggable LLM backends.  Each backend implements ``complete(system, user) -> str``.
 
 * ``gemini``  : Google AI Studio REST API (no SDK). Key from env ``GEMINI_API_KEY``.
+* ``gemini-cli``: shells out to Google's ``gemini`` CLI (uses a logged-in Google account's quota).
 * ``claude-cli``: shells out to ``claude -p`` (Claude Code CLI) if installed.
 * ``file``    : returns a hand-written response from a file (used to disclose /
                 reproduce a manual intervention, or to replay a logged response).
@@ -69,8 +70,14 @@ class GeminiBackend(Backend):
                     raise LLMError(f"empty text, finishReason={cands[0].get('finishReason')}")
                 return text
             except urllib.error.HTTPError as e:
-                last = f"HTTP {e.code}: {e.read()[:300]!r}"
-                if e.code not in (429, 500, 502, 503, 504):
+                body = e.read().decode(errors="replace")
+                try:
+                    msg = json.loads(body)["error"]["message"]
+                except Exception:  # noqa: BLE001
+                    msg = body
+                last = f"HTTP {e.code}: {msg[:1500]}"
+                # 'limit: 0' = this model has no quota on this key (e.g. free tier); retrying cannot help
+                if e.code not in (429, 500, 502, 503, 504) or "limit: 0" in msg:
                     raise LLMError(last) from e
             except (urllib.error.URLError, TimeoutError, LLMError) as e:
                 last = str(e)
@@ -94,6 +101,31 @@ class ClaudeCLIBackend(Backend):
         r = subprocess.run(cmd, input=user, capture_output=True, text=True, timeout=self.timeout)
         if r.returncode != 0:
             raise LLMError(f"claude -p failed: {r.stderr[-500:]}")
+        return r.stdout
+
+
+class GeminiCLIBackend(Backend):
+    """Google's `gemini` CLI (npm @google/gemini-cli). When logged in with a Google
+    account it uses that account's Gemini subscription quota instead of an API key.
+    Runs in an empty temp directory so the CLI's own file tools see nothing."""
+    name = "gemini-cli"
+
+    def __init__(self, model: str = "", timeout: int = 900):
+        self.model = model or "default"
+        self.timeout = timeout
+
+    def complete(self, system: str, user: str) -> str:
+        import tempfile
+        prompt = f"{system}\n\n{user}"
+        cmd = ["gemini", "-p", prompt]
+        if self.model != "default":
+            cmd += ["-m", self.model]
+        env = {k: v for k, v in os.environ.items() if k not in ("GEMINI_API_KEY", "GOOGLE_API_KEY")}
+        with tempfile.TemporaryDirectory() as cwd:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout, cwd=cwd,
+                               stdin=subprocess.DEVNULL, env=env)
+        if r.returncode != 0:
+            raise LLMError(f"gemini CLI failed: {r.stderr[-1500:]}")
         return r.stdout
 
 
@@ -132,6 +164,8 @@ class MockBackend(Backend):
 def make_backend(name: str, model: str = "", response_file: str = "") -> Backend:
     if name == "gemini":
         return GeminiBackend(model or os.environ.get("GEMINI_MODEL", "gemini-2.5-pro"))
+    if name == "gemini-cli":
+        return GeminiCLIBackend(model)
     if name == "claude-cli":
         return ClaudeCLIBackend(model)
     if name == "file":
