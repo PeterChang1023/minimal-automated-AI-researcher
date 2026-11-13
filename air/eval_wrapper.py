@@ -22,6 +22,53 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
+LOSS_FILE = "loss_curve.json"
+
+
+def install_loss_logger(official, print_every=5):
+    """Record the mean pretraining loss of EVERY epoch without editing the official
+    script: the criterion the official pretrain() builds is wrapped so each batch loss
+    is accumulated (detached, on device); an epoch ends after len(train_loader) calls.
+    One .item() per epoch; the training computation itself is unchanged."""
+    import torch
+    import torch.nn as nn
+
+    state = {"n_batches": None, "calls": 0, "sum": None, "curve": [], "t0": time.time()}
+    CandidateLoss = official.BarlowTwinsLoss
+
+    class LoggedLoss(nn.Module):
+        def __init__(self, *a, **k):
+            super().__init__()
+            self.inner = CandidateLoss(*a, **k)
+
+        def forward(self, z1, z2):
+            loss = self.inner(z1, z2)
+            d = loss.detach()
+            state["sum"] = d if state["sum"] is None else state["sum"] + d
+            state["calls"] += 1
+            if state["n_batches"] and state["calls"] % state["n_batches"] == 0:
+                ep = state["calls"] // state["n_batches"]
+                mean = float(state["sum"]) / state["n_batches"]
+                state["sum"] = None
+                state["curve"].append({"epoch": ep, "loss": mean,
+                                       "elapsed_s": round(time.time() - state["t0"], 1)})
+                with open(LOSS_FILE, "w") as f:
+                    json.dump(state["curve"], f)
+                if ep % print_every == 0 or ep == 1:
+                    print(f"[harness] epoch {ep}: mean pretrain loss {mean:.4f}", flush=True)
+            return loss
+
+    orig_pretrain = official.pretrain
+
+    def pretrain(model, train_loader, config, device):
+        state["n_batches"] = len(train_loader)
+        state["t0"] = time.time()
+        return orig_pretrain(model, train_loader, config, device)
+
+    official.BarlowTwinsLoss = LoggedLoss
+    official.pretrain = pretrain
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--budget", required=True)
@@ -63,6 +110,8 @@ def main():
         _orig_set_seed = official.set_seed
         official.set_seed = lambda _s=42: _orig_set_seed(int(seed))
         print(f"[harness] pretrain seed override: {seed} (robustness check)", flush=True)
+
+    install_loss_logger(official)
 
     sys.argv = ["train_eval_baseline.py", "--split", args.split]
     t0 = time.time()

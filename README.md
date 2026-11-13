@@ -57,6 +57,7 @@ python -m air.loop --run-name main --max-iters 5 --propose-next
 
 # Seed robustness check (outside the selection loop): baseline + best code with extra seeds
 python scripts/seed_check.py runs/main --seeds 1 2   # ~4 x 7 min -> runs/main/seed_check/summary.json
+python scripts/plot_loss_curves.py runs/main         # per-epoch pretraining loss -> runs/main/viz/loss_curves.png
 
 # Part 3 – visualization from the real logs
 python scripts/visualize.py runs/main        # -> runs/main/viz/progress.png, trace.html
@@ -107,6 +108,7 @@ runs/<run>/
   run_config.json          budget, seeds, fingerprint, LLM, hardware, argv (+ resumes)
   history.jsonl            one record per iteration (the source for the visualization)
   baseline/algorithm.py    original code          best/algorithm.py + meta.json  best valid code
+  iter_k/loss_curve.json   mean pretraining loss of every epoch (runs after 2026-11-13 23:30)
   iter_000/                baseline: algorithm.py, smoke.log, stdout.log, val_info.json, record.json
   iter_001/                prompt_system.txt, prompt_user.txt, llm_response.txt, proposal.json,
                            algorithm.py, diff_vs_best.patch, diff_vs_baseline.patch,

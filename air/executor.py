@@ -125,6 +125,12 @@ class Executor:
         res["seconds"] = round(dt, 1)
         log_text = (out_dir / "stdout.log").read_text(errors="replace")
         res["losses"] = parse_losses(log_text)
+        if (sb / "loss_curve.json").exists():
+            shutil.copy2(sb / "loss_curve.json", out_dir / "loss_curve.json")
+            try:
+                res["loss_curve"] = json.loads((sb / "loss_curve.json").read_text())
+            except Exception:  # noqa: BLE001
+                pass
         if (sb / "effective_config.json").exists():
             shutil.copy2(sb / "effective_config.json", out_dir / "effective_config.json")
         if to:

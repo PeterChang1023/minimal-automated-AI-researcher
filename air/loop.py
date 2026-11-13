@@ -170,7 +170,7 @@ class Run:
         return rec["decision"] == "baseline"
 
     def _result_fields(self, res):
-        keep = ["status", "val_acc", "seconds", "smoke_seconds", "error", "losses", "fake"]
+        keep = ["status", "val_acc", "seconds", "smoke_seconds", "error", "losses", "loss_curve", "fake"]
         out = {k: res[k] for k in keep if k in res}
         if "error" in out:
             out["error"] = out["error"][-3000:]
