@@ -316,7 +316,7 @@ def parse_args(argv=None):
     user = os.environ.get("USER", "user")
     p.add_argument("--run-name", required=True)
     p.add_argument("--backend", default="gemini", choices=["gemini", "gemini-cli", "claude-cli", "file", "mock"])
-    p.add_argument("--model", default="", help="LLM model id (gemini default: $GEMINI_MODEL or gemini-2.5-pro)")
+    p.add_argument("--model", default="", help="LLM model id (gemini default: $GEMINI_MODEL or gemini-3.1-pro-preview)")
     p.add_argument("--response-file", default="", help="for --backend file")
     p.add_argument("--max-iters", type=int, default=1, help="number of LLM candidates (excluding baseline)")
     p.add_argument("--max-hours", type=float, default=12.0)

@@ -163,7 +163,7 @@ class MockBackend(Backend):
 
 def make_backend(name: str, model: str = "", response_file: str = "") -> Backend:
     if name == "gemini":
-        return GeminiBackend(model or os.environ.get("GEMINI_MODEL", "gemini-2.5-pro"))
+        return GeminiBackend(model or os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview"))
     if name == "gemini-cli":
         return GeminiCLIBackend(model)
     if name == "claude-cli":
