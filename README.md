@@ -20,6 +20,9 @@ the accept/reject decision, the feedback text) is deterministic program code.
 # code lives in $HOME; data + checkpoints go to /cache/$USER (lab rule)
 git clone https://github.com/PeterChang1023/minimal-automated-AI-researcher.git ~/minimal-automated-AI-researcher
 cd ~/minimal-automated-AI-researcher
+# keep download caches out of $HOME (lab rule: only code + packages in home)
+export PIP_CACHE_DIR=/cache/$USER/pip CONDA_PKGS_DIRS=/cache/$USER/conda_pkgs TORCH_HOME=/cache/$USER/torch
+mkdir -p $PIP_CACHE_DIR $CONDA_PKGS_DIRS $TORCH_HOME
 conda env create -f environment.yml          # creates env "air"
 conda activate air
 bash scripts/env_info.sh                     # records GPU / driver / torch for the report
@@ -55,6 +58,7 @@ python scripts/visualize.py runs/main        # -> runs/main/viz/progress.png, tr
 
 # when finished (lab rule): remove data + checkpoints, keep logs
 bash scripts/cleanup_cache.sh
+rm -rf /cache/$USER/pip /cache/$USER/conda_pkgs /cache/$USER/torch
 ```
 
 Pipeline test without GPU or API key (random accuracies, clearly marked as FAKE in all outputs):
