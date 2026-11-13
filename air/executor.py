@@ -25,14 +25,25 @@ def _run(cmd, cwd, log_path, timeout, env):
             rc = p.wait(timeout=timeout)
             timed_out = False
         except subprocess.TimeoutExpired:
-            os.killpg(p.pid, signal.SIGTERM)
-            try:
-                p.wait(timeout=30)
-            except subprocess.TimeoutExpired:
-                os.killpg(p.pid, signal.SIGKILL)
-                p.wait()
+            _kill_group(p)
             rc, timed_out = None, True
+        except BaseException:
+            # Ctrl-C / SIGTERM of the loop: the child runs in its own session, so it
+            # would otherwise keep training on the shared GPU as an orphan.
+            _kill_group(p)
+            raise
     return rc, timed_out, time.time() - t0
+
+
+def _kill_group(p):
+    try:
+        os.killpg(p.pid, signal.SIGTERM)
+        p.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        os.killpg(p.pid, signal.SIGKILL)
+        p.wait()
+    except ProcessLookupError:
+        pass
 
 
 def tail(path, n=25):
