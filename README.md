@@ -118,6 +118,7 @@ Visualization: [`runs/main/viz/progress.png`](runs/main/viz/progress.png) and
 | run | iter | what | LLM | pretrain epochs | val acc | wall time | decision |
 |---|---|---|---|---|---|---|---|
 | upstream (reported) | – | Barlow Twins baseline | – | 130 | 47.77 % | – | – |
+| full130 | 0 | Barlow Twins baseline, unmodified, **full upstream budget** (reproduction check) | – | 130 | **47.04 %** | 1,070 s | baseline |
 | main | 0 | Barlow Twins baseline, unmodified | – | 50 | **28.67 %** | 430 s | baseline |
 | main | 1 | LLM call failed: model closed to new users (HTTP 404) | gemini-2.5-pro | 50 | – | – | rejected |
 | main | 2 | LLM call failed: Gemini CLI refused untrusted folder (fixed in harness) | gemini-3.1-pro-preview | 50 | – | – | rejected |
@@ -125,6 +126,11 @@ Visualization: [`runs/main/viz/progress.png`](runs/main/viz/progress.png) and
 | main | 4 | LLM call failed: model overloaded (HTTP 503 after 5 retries) | gemini-3.8-flash | 50 | – | – | rejected |
 | main | 5 | InfoNCE (SimCLR) loss, τ = 0.2, inside `BarlowTwinsLoss`; lr 0.4 → 0.5 | gemini-3.5-flash | 50 | **51.41 %** | 430 s | **accepted** (+22.74 pts) |
 | main | next | lower InfoNCE temperature 0.2 → 0.1 (generated from iter-5 feedback, **not executed**) | gemini-3.5-flash | – | – | – | – |
+
+**Reproduction check.** With the upstream 130-epoch budget our environment gives 47.04 % vs the
+reported 47.77 % (−0.73 pts, within the ≈ ±0.9 pt standard error of a 3,021-image val set), so the
+harness and environment reproduce the official baseline. `full130` was run with `python -m air.loop --run-name full130 --pretrain-epochs 130 --baseline-only`; its log is not committed (only the final line was transferred). Note that the accepted 50-epoch candidate (51.41 %) beats the
+130-epoch baseline at ~38 % of the pretraining compute (validation split only; not a test-set claim).
 
 Reproduce: `python -m air.loop --run-name main --baseline-only`, then
 `python -m air.loop --run-name main --max-iters 5 --propose-next --backend gemini --model gemini-3.5-flash`.
