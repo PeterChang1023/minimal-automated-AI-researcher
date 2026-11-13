@@ -10,6 +10,7 @@ Writes into runs/<run-name>/viz/:
 Everything is read from history.jsonl and the iter_*/ folders; nothing is typed in by hand.
 """
 import html
+import re
 import json
 import sys
 from pathlib import Path
@@ -80,15 +81,40 @@ def progress_png(hist, cfg, out: Path):
     ax.set_xlabel("iteration")
     ax.set_ylabel("validation linear-probe accuracy")
     b = cfg["budget"]
-    ax.set_title(f"Barlow Twins CIFAR-100 · {b['pretrain_epochs']} pretrain epochs · "
-                 f"LLM {cfg['llm']['backend']} {cfg['llm']['model']}", fontsize=10, loc="left")
+    ax.set_title(f"FML-bench solo-learn · CIFAR-100 · {b['pretrain_epochs']} pretrain epochs · "
+                 f"LLM: {llm_label(hist, cfg)}", fontsize=10, loc="left")
+    # failed iterations have no accuracy: label that band instead of a fake value
+    ticks = [t for t in ax.get_yticks() if t > fail_y + pad * 0.6 and t <= hi + pad]
+    ax.set_yticks(ticks + [fail_y])
+    ax.set_yticklabels([f"{t:.2f}" for t in ticks] + ["no result"])
+    ax.axhline(fail_y + pad * 0.6, color="#c3c2b7", lw=0.8, ls="--")
     fig.tight_layout()
     fig.savefig(out)
     plt.close(fig)
 
 
+def err_block(e):
+    e = ANSI.sub("", str(e or ""))
+    if len(e) <= 300:
+        return f"<pre class='err'>{html.escape(e)}</pre>"
+    return (f"<pre class='err'>{html.escape(e[:300])}…</pre>"
+            f"<details><summary>full error</summary><pre class='err'>{html.escape(e)}</pre></details>")
+
+
+def llm_label(hist, cfg):
+    models = []
+    for h in hist:
+        m = (h.get("llm") or {}).get("model")
+        if m and h["status"] == "ok" and m not in models:
+            models.append(m)
+    return ", ".join(models) or f"{cfg['llm']['backend']} {cfg['llm']['model']}"
+
+
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
 def esc(x):
-    return html.escape(str(x if x is not None else "–"))
+    return html.escape(ANSI.sub("", str(x if x is not None else "–")))
 
 
 def diff_html(patch: str) -> str:
@@ -114,6 +140,10 @@ def card(h, run_dir: Path):
     parts = []
     if h["kind"] == "baseline":
         parts.append(stage("prog", "Proposal", "<p>None: unmodified upstream FML-bench <code>algorithm.py</code>.</p>"))
+    elif h["status"] == "llm_error":
+        llm = h.get("llm") or {}
+        parts.append(stage("prog", f"1 · Propose: LLM call failed ({esc(llm.get('backend'))} {esc(llm.get('model'))})",
+            f"<p>No code was produced; nothing was executed.</p>{err_block(h.get('error'))}"))
     else:
         llm = h.get("llm") or {}
         parts.append(stage("llm", f"1 · Propose ({esc(llm.get('backend'))} {esc(llm.get('model'))})",
@@ -126,8 +156,8 @@ def card(h, run_dir: Path):
             f"({patch.count(chr(10)+'+')} + / {patch.count(chr(10)+'-')} − lines)</summary>{diff_html(patch)}</details>"))
         sp = h.get("static_problems") or []
         parts.append(stage("prog", "3 · Static checks",
-            "<p class='pass'>passed</p>" if not sp and h["status"] != "llm_error" else
-            "<ul>" + "".join(f"<li>{esc(p)}</li>" for p in sp) + "</ul>" if sp else f"<p>{esc(h.get('error'))}</p>"))
+            "<p class='pass'>passed</p>" if not sp else
+            "<ul>" + "".join(f"<li>{esc(p)}</li>" for p in sp) + "</ul>"))
     ran = h["status"] in ("ok", "runtime_error", "timeout", "no_metric", "smoke_fail")
     if ran:
         losses = h.get("losses") or []
@@ -143,7 +173,7 @@ def card(h, run_dir: Path):
         f"<p class='result'><span class='acc'>{acc_s}</span>"
         f"{f' <span class=delta>{delta:+.2f} pts vs best</span>' if delta is not None else ''}"
         f" <span class='dec {esc(h.get('decision'))}'>{esc(h.get('decision'))}</span></p>"))
-    parts.append(stage("prog", "6 · Record → feedback in the next prompt", f"<pre class='fb'>{esc(h.get('feedback'))}</pre>"))
+    parts.append(stage("prog", "6 · Record → feedback in the next prompt", (f"<pre class='fb'>{esc(h.get('feedback'))}</pre>" if len(str(h.get('feedback'))) < 400 else f"<pre class='fb'>{esc(str(h.get('feedback'))[:300])}…</pre>")))
     return (f"<section class='card'><h2>Iteration {h['iter']} <span class='muted'>· {esc(h['kind'])} · "
             f"{esc(h.get('time'))}</span></h2><div class='stages'>{''.join(parts)}</div></section>")
 

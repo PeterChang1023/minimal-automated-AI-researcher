@@ -1,0 +1,49 @@
+{
+  "iter": 5,
+  "kind": "candidate",
+  "time": "2026-11-13T22:26:01+08:00",
+  "parent_iter": 0,
+  "parent_val_acc": 0.2866600453853607,
+  "llm": {
+    "backend": "gemini",
+    "model": "gemini-3.5-flash",
+    "seconds": 49.5
+  },
+  "fingerprint": {
+    "budget": {
+      "pretrain_epochs": 50,
+      "linear_eval_epochs": 100,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    },
+    "eval_sha256": "6a4f78b42b40da3b9c39b6b5e4db587372623dba7b20f1b95ee64175a2a1d682",
+    "split_sha256": "e5f83281234a2ffa594497fa6e42c38bc3cb7a326b846233c2774550128a7970",
+    "max_batch_size": 512
+  },
+  "hypothesis": "Replacing the rank-deficient Barlow Twins redundancy reduction loss with an InfoNCE (SimCLR) contrastive loss will accelerate representation learning in a short 50-epoch budget.",
+  "rationale": "Under a compute constraint of 50 epochs with batch size 512, Barlow Twins' cross-correlation matrix on 2048-dimensional projections is rank-deficient (rank <= 512) and noisy, leading to slow feature convergence (0.2867 linear probe accuracy). Contrastive InfoNCE directly optimizes sample discriminability over negative pairs in the batch, yielding much faster representation learning per epoch.",
+  "expected_effect": "Significantly higher linear-probe top-1 accuracy on validation data compared to baseline (0.2867).",
+  "change_summary": "Implemented InfoNCE contrastive loss with temperature 0.2 inside BarlowTwinsLoss, adjusted learning rate to 0.5 for SGD with batch size 512.",
+  "static_problems": [],
+  "status": "ok",
+  "val_acc": 0.5140681862831116,
+  "seconds": 431.8,
+  "smoke_seconds": 2.2,
+  "losses": [
+    {
+      "epoch": 1,
+      "loss": 5.4834
+    },
+    {
+      "epoch": 20,
+      "loss": 3.434
+    },
+    {
+      "epoch": 40,
+      "loss": 3.1591
+    }
+  ],
+  "decision": "accepted",
+  "delta_pts": 22.74,
+  "feedback": "ACCEPTED: val_acc 0.5141 > best 0.2867 (+22.74 pts). Now the best."
+}

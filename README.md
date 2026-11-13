@@ -110,24 +110,49 @@ runs/<run>/
   viz/                     progress.png, trace.html
 ```
 
-## 4. Results
+## 4. Results (`runs/main`, hinton, 2026-11-13)
 
-_To be filled from `runs/main` after running on hinton (commands above)._
+Visualization: [`runs/main/viz/progress.png`](runs/main/viz/progress.png) and
+[`runs/main/viz/trace.html`](runs/main/viz/trace.html) (open locally; LLM decisions vs program checks are colour-coded).
 
-| run | iter | what | pretrain epochs | val acc | wall time | decision |
-|---|---|---|---|---|---|---|
-| upstream (reported) | – | baseline | 130 | 47.77 % | – | – |
-| main | 0 | baseline | 50 | | | baseline |
-| main | 1 | LLM candidate | 50 | | | |
+| run | iter | what | LLM | pretrain epochs | val acc | wall time | decision |
+|---|---|---|---|---|---|---|---|
+| upstream (reported) | – | Barlow Twins baseline | – | 130 | 47.77 % | – | – |
+| main | 0 | Barlow Twins baseline, unmodified | – | 50 | **28.67 %** | 430 s | baseline |
+| main | 1 | LLM call failed: model closed to new users (HTTP 404) | gemini-2.5-pro | 50 | – | – | rejected |
+| main | 2 | LLM call failed: Gemini CLI refused untrusted folder (fixed in harness) | gemini-3.1-pro-preview | 50 | – | – | rejected |
+| main | 3 | LLM call failed: free-tier quota is 0 for this model (HTTP 429) | gemini-3.1-pro-preview | 50 | – | – | rejected |
+| main | 4 | LLM call failed: model overloaded (HTTP 503 after 5 retries) | gemini-3.8-flash | 50 | – | – | rejected |
+| main | 5 | InfoNCE (SimCLR) loss, τ = 0.2, inside `BarlowTwinsLoss`; lr 0.4 → 0.5 | gemini-3.5-flash | 50 | **51.41 %** | 430 s | **accepted** (+22.74 pts) |
+| main | next | lower InfoNCE temperature 0.2 → 0.1 (generated from iter-5 feedback, **not executed**) | gemini-3.5-flash | – | – | – | – |
 
-Hardware: hinton, 1× NVIDIA H100 NVL 94 GB (shared), driver 590 / CUDA 13.1; exact
-strings are recorded in `runs/main/run_config.json`.
+Reproduce: `python -m air.loop --run-name main --baseline-only`, then
+`python -m air.loop --run-name main --max-iters 5 --propose-next --backend gemini --model gemini-3.5-flash`.
+Iterations 1–4 are infrastructure failures, kept on purpose: they show the loop recording
+an LLM failure as a rejected iteration without executing anything or touching the best code.
+
+**Review of the accepted change (by the author, not the loop).** The diff
+([`runs/main/iter_005/diff_vs_baseline.patch`](runs/main/iter_005/diff_vs_baseline.patch)) leaves the backbone,
+feature dimension (512), augmentation and evaluation untouched; `effective_config.json` confirms the
+linear-probe protocol was forced to the official values. Pretraining loss fell 5.48 → 3.16
+(chance ≈ ln 1023 ≈ 6.9). Caveats: the LLM changed two things at once (loss and lr), so the gain
+cannot be attributed to either; one seed; val set of 3,021 images (SE ≈ ±0.9 pts). The gap is far
+larger than that noise, but the result is a single comparison, not an ablation.
+
+Hardware: hinton, 1× NVIDIA H100 NVL (95,830 MiB, shared; ~12.6 GB used by others), driver 590.48.01;
+AMD EPYC 9124 (32 threads), 377 GB RAM; Python 3.10.22, torch 2.1.0+cu121, torchvision 0.16.0, cuDNN 8.9.2.
+Exact strings in `runs/main/run_config.json`. Budget: 50 pretrain epochs ≈ 7 min per experiment.
 
 ## 5. Disclosure
 
-* **LLM used by the loop**: Gemini (model id logged per iteration in `history.jsonl`).
+* **LLM used by the loop**: Google Gemini, model id logged per iteration in `history.jsonl`. The accepted
+  candidate and the next proposal came from `gemini-3.5-flash` via the free AI Studio API. Pro models were
+  attempted first but were unavailable on the free tier (404 / quota 0), and a Google-account login of the
+  Gemini CLI could not be completed on the server; those attempts are iterations 1–3.
 * **LLM used to write this repository**: Claude (Anthropic) via Claude Code, with the author reviewing.
-* **Manual interventions**: none in the loop logic. Any hand-written proposal must go through
+* **Manual interventions**: none in the loop logic or in any proposal. Between iterations the author changed
+  the LLM backend/model on the command line and fixed the harness (Gemini CLI trust flag, Ctrl-C cleanup);
+  these commits are in git history and did not change the evaluation or the budget fingerprint. Any hand-written proposal must go through
   `--backend file --response-file ...`, which is logged as `backend: file` in the history.
 * **Failures**: every failed proposal (parse error, static check, smoke test, crash,
   timeout) is kept in `history.jsonl` and shown in the visualization.

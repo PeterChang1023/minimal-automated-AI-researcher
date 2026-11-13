@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Replacing the rank-deficient Barlow Twins redundancy reduction loss with an InfoNCE (SimCLR) contrastive loss will accelerate representation learning in a short 50-epoch budget.",
+  "rationale": "Under a compute constraint of 50 epochs with batch size 512, Barlow Twins' cross-correlation matrix on 2048-dimensional projections is rank-deficient (rank <= 512) and noisy, leading to slow feature convergence (0.2867 linear probe accuracy). Contrastive InfoNCE directly optimizes sample discriminability over negative pairs in the batch, yielding much faster representation learning per epoch.",
+  "expected_effect": "Significantly higher linear-probe top-1 accuracy on validation data compared to baseline (0.2867).",
+  "change_summary": "Implemented InfoNCE contrastive loss with temperature 0.2 inside BarlowTwinsLoss, adjusted learning rate to 0.5 for SGD with batch size 512."
+}

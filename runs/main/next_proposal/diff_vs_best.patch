@@ -1,0 +1,24 @@
+--- iter_005/algorithm.py (best)
++++ next_proposal/algorithm.py
+@@ -1,9 +1,9 @@
+ """
+-Self-supervised learning algorithm: SimCLR InfoNCE Loss on CIFAR-100.
++Self-supervised learning algorithm: SimCLR InfoNCE Loss (tau=0.1) on CIFAR-100.
+ 
+ In a compute-constrained setting (50 epochs), InfoNCE contrastive learning
+-converges significantly faster than Barlow Twins redundancy reduction,
+-yielding stronger representations in fewer iterations.
++with a tuned temperature parameter (tau=0.1) provides stronger hard-negative
++gradients, accelerating representation learning.
+ """
+ import torch
+ import torch.nn as nn
+@@ -15,7 +15,7 @@
+ class BarlowTwinsLoss(nn.Module):
+     """InfoNCE (SimCLR) loss wrapped in BarlowTwinsLoss interface."""
+ 
+-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.2):
++    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.1):
+         super().__init__()
+         self.lambda_param = lambda_param
+         self.embedding_dim = embedding_dim
