@@ -29,7 +29,7 @@ python -m air.llm                            # lists Gemini models your key can 
 ```
 
 The GPU is shared, so pin one device and keep the default batch size (512, same as
-upstream; ~6 GB):
+upstream; estimated 10–15 GB of GPU memory, not yet measured):
 
 ```bash
 export CUDA_VISIBLE_DEVICES=0
