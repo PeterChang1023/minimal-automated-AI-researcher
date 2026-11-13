@@ -160,6 +160,8 @@ pretraining seed changes, split and linear-probe seeds fixed; 50 epochs):
 | baseline (Barlow Twins) | 28.67 % | 26.55 % | 28.63 % | **27.95 ± 1.21 %** |
 | best (iter 5, InfoNCE τ=0.2, lr 0.5) | 51.41 % | 52.07 % | 51.51 % | **51.66 ± 0.36 %** |
 
+Per-epoch pretraining loss for these reruns: [`runs/main/viz/loss_curves.png`](runs/main/viz/loss_curves.png) (each panel its own y-scale; Barlow Twins ≈ 1,800 → 470, InfoNCE ≈ 5.5 → 3.1; seeds overlap closely).
+
 The gain (+23.7 pts on the means) is ~20× the larger seed-to-seed sd, so iter 5's acceptance is not
 seed luck. The baseline's seed-to-seed spread (26.55–28.67 %, ~2 pts) also shows that the loop's
 single-seed strict-`>` rule *would* be able to accept a 1–2 pt "improvement" that is pure noise —
