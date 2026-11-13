@@ -123,6 +123,8 @@ class GeminiCLIBackend(Backend):
         env = {k: v for k, v in os.environ.items() if k not in ("GEMINI_API_KEY", "GOOGLE_API_KEY")}
         # headless mode refuses untrusted folders; the cwd is a fresh empty temp dir, so trusting it is safe
         env["GEMINI_CLI_TRUST_WORKSPACE"] = "true"
+        # force "Login with Google" (subscription quota) even if settings.json says gemini-api-key
+        env.setdefault("GOOGLE_GENAI_USE_GCA", "true")
         with tempfile.TemporaryDirectory() as cwd:
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout, cwd=cwd,
                                stdin=subprocess.DEVNULL, env=env)
