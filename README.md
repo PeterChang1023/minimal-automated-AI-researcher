@@ -1,5 +1,7 @@
 # Minimal automated AI researcher
 
+See [`docs/EXAM_MAPPING.md`](docs/EXAM_MAPPING.md) for where each exam requirement is answered.
+
 A small, auditable **Propose → Modify → Execute → Evaluate → Record** loop on the
 FML-bench task **`Representation_Learning_solo_learn`** (Barlow Twins, ResNet-18,
 CIFAR-100, linear-probe evaluation). An LLM proposes one hypothesis per iteration and
