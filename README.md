@@ -40,7 +40,7 @@ export CUDA_VISIBLE_DEVICES=0
 
 ## 2. Commands
 
-Run inside `tmux` (each experiment is ~10–20 min). Every command is resumable: if it
+Run inside `tmux` (each experiment is ~10–20 min). If tmux is missing, install it into the env without root: `conda install -n air -c conda-forge tmux -y`. Every command is resumable: if it
 dies, re-run the same line and it continues from `runs/<name>/history.jsonl`.
 
 ```bash
