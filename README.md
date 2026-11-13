@@ -152,6 +152,19 @@ linear-probe protocol was forced to the official values. Pretraining loss fell 5
 cannot be attributed to either; one seed; val set of 3,021 images (SE ≈ ±0.9 pts). The gap is far
 larger than that noise, but the result is a single comparison, not an ablation.
 
+**Seed robustness check** (`scripts/seed_check.py`, outside the selection loop; only the global
+pretraining seed changes, split and linear-probe seeds fixed; 50 epochs):
+
+| code | seed 42 | seed 1 | seed 2 | mean ± sd |
+|---|---|---|---|---|
+| baseline (Barlow Twins) | 28.67 % | 26.55 % | 28.63 % | **27.95 ± 1.21 %** |
+| best (iter 5, InfoNCE τ=0.2, lr 0.5) | 51.41 % | 52.07 % | 51.51 % | **51.66 ± 0.36 %** |
+
+The gain (+23.7 pts on the means) is ~20× the larger seed-to-seed sd, so iter 5's acceptance is not
+seed luck. The baseline's seed-to-seed spread (26.55–28.67 %, ~2 pts) also shows that the loop's
+single-seed strict-`>` rule *would* be able to accept a 1–2 pt "improvement" that is pure noise —
+the main limitation addressed in Part 4.
+
 Hardware: hinton, 1× NVIDIA H100 NVL (95,830 MiB, shared; ~12.6 GB used by others), driver 590.48.01;
 AMD EPYC 9124 (32 threads), 377 GB RAM; Python 3.10.22, torch 2.1.0+cu121, torchvision 0.16.0, cuDNN 8.9.2.
 Exact strings in `runs/main/run_config.json`. Budget: 50 pretrain epochs ≈ 7 min per experiment.
