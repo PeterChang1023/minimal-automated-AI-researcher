@@ -121,6 +121,8 @@ class GeminiCLIBackend(Backend):
         if self.model != "default":
             cmd += ["-m", self.model]
         env = {k: v for k, v in os.environ.items() if k not in ("GEMINI_API_KEY", "GOOGLE_API_KEY")}
+        # headless mode refuses untrusted folders; the cwd is a fresh empty temp dir, so trusting it is safe
+        env["GEMINI_CLI_TRUST_WORKSPACE"] = "true"
         with tempfile.TemporaryDirectory() as cwd:
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout, cwd=cwd,
                                stdin=subprocess.DEVNULL, env=env)
