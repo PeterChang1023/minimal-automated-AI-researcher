@@ -1,0 +1,24 @@
+{
+  "kind": "next_proposal",
+  "time": "2026-11-14T02:15:07+08:00",
+  "status": "proposed_not_executed",
+  "llm": {
+    "backend": "gemini",
+    "model": "gemini-3.5-flash",
+    "seconds": 71.9
+  },
+  "based_on_history_iters": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "error": null,
+  "hypothesis": "Upgrading Decoupled Contrastive Learning (DCL) to DCL with Hard Negative Weighting (DCLW) will improve representation quality by downweighting false negative pairs while preserving strong repulsion for distinct negative pairs.",
+  "rationale": "Iter 2 showed that DCL improves over InfoNCE (0.5396 vs 0.5310) by eliminating positive-pair terms from the loss denominator. Iter 4 further improved performance to 0.5419 with a 2-layer projection head. However, standard DCL treats all negative pairs equally in the exponential sum. In CIFAR-100, images from the same underlying class often act as negative pairs (false negatives) with high similarity z_i^T z_j ~ 1. DCLW (Yeh et al., CVPR 2022) scales negative pair contributions by their squared distance w_ij = 2 - 2 z_i^T z_j, suppressing false-negative repulsions and enhancing feature clustering within 50 epochs.",
+  "expected_effect": "Validation linear-probe top-1 accuracy will increase beyond 0.5419.",
+  "change_summary": "Updated `BarlowTwinsLoss` forward pass to compute DCLW loss using distance-based negative weighting w_ij = 2.0 - 2.0 * (z_i^T z_j), implemented stably via log-space addition `sim_neg + log(w_ij)` inside `logsumexp`.",
+  "static_problems": []
+}

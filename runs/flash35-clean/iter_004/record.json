@@ -1,0 +1,301 @@
+{
+  "iter": 4,
+  "kind": "candidate",
+  "time": "2026-11-14T02:01:07+08:00",
+  "parent_iter": 2,
+  "parent_val_acc": 0.5395564436912537,
+  "llm": {
+    "backend": "gemini",
+    "model": "gemini-3.5-flash",
+    "seconds": 63.6
+  },
+  "fingerprint": {
+    "budget": {
+      "pretrain_epochs": 50,
+      "linear_eval_epochs": 100,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    },
+    "eval_sha256": "6a4f78b42b40da3b9c39b6b5e4db587372623dba7b20f1b95ee64175a2a1d682",
+    "split_sha256": "e5f83281234a2ffa594497fa6e42c38bc3cb7a326b846233c2774550128a7970",
+    "max_batch_size": 512
+  },
+  "hypothesis": "Replacing the 3-layer projection head with a standard 2-layer projection head (Linear-BN-ReLU-Linear) will accelerate representation learning and improve validation accuracy under a 50-epoch budget by reducing head over-parameterization and facilitating faster gradient flow into the backbone.",
+  "rationale": "In iter 1 and iter 2, switching to contrastive/DCL losses yielded huge accuracy gains (+27.21 pts over baseline), but retained the 3-layer projection head from the original Barlow Twins architecture. For contrastive learning (SimCLR/DCL) under short pretraining budgets (50 epochs), a 3-layer MLP adds ~4.2 million unnecessary parameters in the discarded head, slowing down convergence. Standard contrastive learning literature (Chen et al., 2020) shows that a 2-layer projection head is optimal for representation quality.",
+  "expected_effect": "Faster convergence during 50 pretraining epochs and higher linear-probe accuracy on CIFAR-100 validation set.",
+  "change_summary": "In `ProjectionHead`, simplified the architecture from 3 linear layers to 2 linear layers (Linear(512, 2048) -> BatchNorm1d -> ReLU -> Linear(2048, 2048)), keeping all DCL loss parameters and augmentations identical to iter 2.",
+  "static_problems": [],
+  "status": "ok",
+  "val_acc": 0.541873574256897,
+  "seconds": 362.5,
+  "smoke_seconds": 2.0,
+  "losses": [
+    {
+      "epoch": 1,
+      "loss": 5.8824
+    },
+    {
+      "epoch": 20,
+      "loss": 1.3032
+    },
+    {
+      "epoch": 40,
+      "loss": 0.6391
+    }
+  ],
+  "loss_curve": [
+    {
+      "epoch": 1,
+      "loss": 5.882350017115013,
+      "elapsed_s": 7.0
+    },
+    {
+      "epoch": 2,
+      "loss": 5.170060934479704,
+      "elapsed_s": 13.5
+    },
+    {
+      "epoch": 3,
+      "loss": 4.52938150622181,
+      "elapsed_s": 20.0
+    },
+    {
+      "epoch": 4,
+      "loss": 3.8673923138490656,
+      "elapsed_s": 26.5
+    },
+    {
+      "epoch": 5,
+      "loss": 3.333654659310567,
+      "elapsed_s": 33.1
+    },
+    {
+      "epoch": 6,
+      "loss": 2.895818336722777,
+      "elapsed_s": 39.6
+    },
+    {
+      "epoch": 7,
+      "loss": 2.600884506382893,
+      "elapsed_s": 46.2
+    },
+    {
+      "epoch": 8,
+      "loss": 2.3599340694466817,
+      "elapsed_s": 52.8
+    },
+    {
+      "epoch": 9,
+      "loss": 2.1951470129268684,
+      "elapsed_s": 59.4
+    },
+    {
+      "epoch": 10,
+      "loss": 2.034696441335776,
+      "elapsed_s": 66.0
+    },
+    {
+      "epoch": 11,
+      "loss": 1.8975240176485986,
+      "elapsed_s": 72.6
+    },
+    {
+      "epoch": 12,
+      "loss": 1.796819313285277,
+      "elapsed_s": 79.3
+    },
+    {
+      "epoch": 13,
+      "loss": 1.7069835859475677,
+      "elapsed_s": 85.9
+    },
+    {
+      "epoch": 14,
+      "loss": 1.6490695599428158,
+      "elapsed_s": 92.5
+    },
+    {
+      "epoch": 15,
+      "loss": 1.5806272840991462,
+      "elapsed_s": 99.1
+    },
+    {
+      "epoch": 16,
+      "loss": 1.510448967058634,
+      "elapsed_s": 105.7
+    },
+    {
+      "epoch": 17,
+      "loss": 1.4685421973159634,
+      "elapsed_s": 112.3
+    },
+    {
+      "epoch": 18,
+      "loss": 1.4210829587326836,
+      "elapsed_s": 119.0
+    },
+    {
+      "epoch": 19,
+      "loss": 1.351404563667848,
+      "elapsed_s": 125.6
+    },
+    {
+      "epoch": 20,
+      "loss": 1.3031729472052191,
+      "elapsed_s": 132.2
+    },
+    {
+      "epoch": 21,
+      "loss": 1.25951432690178,
+      "elapsed_s": 138.8
+    },
+    {
+      "epoch": 22,
+      "loss": 1.2267827299452319,
+      "elapsed_s": 145.4
+    },
+    {
+      "epoch": 23,
+      "loss": 1.2143551541357924,
+      "elapsed_s": 152.0
+    },
+    {
+      "epoch": 24,
+      "loss": 1.1219280282246697,
+      "elapsed_s": 158.6
+    },
+    {
+      "epoch": 25,
+      "loss": 1.1375934561503303,
+      "elapsed_s": 165.2
+    },
+    {
+      "epoch": 26,
+      "loss": 1.0734442484747504,
+      "elapsed_s": 171.8
+    },
+    {
+      "epoch": 27,
+      "loss": 1.0331108643836582,
+      "elapsed_s": 178.5
+    },
+    {
+      "epoch": 28,
+      "loss": 1.0037887415935083,
+      "elapsed_s": 185.2
+    },
+    {
+      "epoch": 29,
+      "loss": 0.9648508288196682,
+      "elapsed_s": 191.9
+    },
+    {
+      "epoch": 30,
+      "loss": 0.9361760247613966,
+      "elapsed_s": 198.5
+    },
+    {
+      "epoch": 31,
+      "loss": 0.9000493472384423,
+      "elapsed_s": 205.1
+    },
+    {
+      "epoch": 32,
+      "loss": 0.8700444329645216,
+      "elapsed_s": 211.7
+    },
+    {
+      "epoch": 33,
+      "loss": 0.8395288998318702,
+      "elapsed_s": 218.4
+    },
+    {
+      "epoch": 34,
+      "loss": 0.8145513632862839,
+      "elapsed_s": 224.9
+    },
+    {
+      "epoch": 35,
+      "loss": 0.7837098111811373,
+      "elapsed_s": 231.6
+    },
+    {
+      "epoch": 36,
+      "loss": 0.7538920137071118,
+      "elapsed_s": 238.2
+    },
+    {
+      "epoch": 37,
+      "loss": 0.7159971256846005,
+      "elapsed_s": 244.8
+    },
+    {
+      "epoch": 38,
+      "loss": 0.6840214680150613,
+      "elapsed_s": 251.4
+    },
+    {
+      "epoch": 39,
+      "loss": 0.6748001255939916,
+      "elapsed_s": 258.0
+    },
+    {
+      "epoch": 40,
+      "loss": 0.6390689181298325,
+      "elapsed_s": 264.6
+    },
+    {
+      "epoch": 41,
+      "loss": 0.624825821709387,
+      "elapsed_s": 271.2
+    },
+    {
+      "epoch": 42,
+      "loss": 0.5811719206190601,
+      "elapsed_s": 277.8
+    },
+    {
+      "epoch": 43,
+      "loss": 0.5646543994392317,
+      "elapsed_s": 284.4
+    },
+    {
+      "epoch": 44,
+      "loss": 0.5478237584694144,
+      "elapsed_s": 291.0
+    },
+    {
+      "epoch": 45,
+      "loss": 0.5309093514668572,
+      "elapsed_s": 297.6
+    },
+    {
+      "epoch": 46,
+      "loss": 0.5300303193711743,
+      "elapsed_s": 304.2
+    },
+    {
+      "epoch": 47,
+      "loss": 0.5364178136451957,
+      "elapsed_s": 310.8
+    },
+    {
+      "epoch": 48,
+      "loss": 0.5142174160357603,
+      "elapsed_s": 317.4
+    },
+    {
+      "epoch": 49,
+      "loss": 0.49138786866492834,
+      "elapsed_s": 324.0
+    },
+    {
+      "epoch": 50,
+      "loss": 0.524725845179607,
+      "elapsed_s": 330.6
+    }
+  ],
+  "decision": "accepted",
+  "delta_pts": 0.23,
+  "feedback": "ACCEPTED: val_acc 0.5419 > best 0.5396 (+0.23 pts). Now the best."
+}

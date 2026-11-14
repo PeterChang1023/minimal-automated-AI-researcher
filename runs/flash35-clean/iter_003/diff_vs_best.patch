@@ -1,0 +1,35 @@
+--- iter_002/algorithm.py (best)
++++ iter_003/algorithm.py
+@@ -1,6 +1,6 @@
+ """
+ Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:
+-Decoupled Contrastive Learning (DCL) loss with optimized CIFAR augmentations.
++Decoupled Contrastive Learning (DCL) loss with temperature tau=0.07 and CIFAR-adapted crop scaling.
+ """
+ import torch
+ import torch.nn as nn
+@@ -18,7 +18,7 @@
+     pair saturation and maintaining strong negative repulsion gradients throughout training.
+     """
+ 
+-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.1):
++    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.07):
+         super().__init__()
+         self.lambda_param = lambda_param
+         self.embedding_dim = embedding_dim
+@@ -122,13 +122,14 @@
+ def get_augmentation():
+     """
+     Return augmentation transforms tailored for CIFAR-100 32x32 images.
++    Scale minimum set to 0.20 to prevent extreme semantic loss from over-cropping low-res images.
+     Gaussian blur is omitted as it destroys key spatial information at 32x32.
+     """
+     mean = (0.5071, 0.4867, 0.4408)
+     std = (0.2675, 0.2565, 0.2761)
+ 
+     return transforms.Compose([
+-        transforms.RandomResizedCrop(32, scale=(0.08, 1.0)),
++        transforms.RandomResizedCrop(32, scale=(0.2, 1.0)),
+         transforms.RandomHorizontalFlip(p=0.5),
+         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+         transforms.RandomGrayscale(p=0.2),

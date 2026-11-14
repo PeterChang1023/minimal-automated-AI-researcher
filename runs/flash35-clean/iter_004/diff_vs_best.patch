@@ -1,0 +1,49 @@
+--- iter_002/algorithm.py (best)
++++ iter_004/algorithm.py
+@@ -1,6 +1,7 @@
+ """
+ Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:
+-Decoupled Contrastive Learning (DCL) loss with optimized CIFAR augmentations.
++Decoupled Contrastive Learning (DCL) loss with a streamlined 2-layer projection head
++and optimized CIFAR augmentations.
+ """
+ import torch
+ import torch.nn as nn
+@@ -60,15 +61,15 @@
+ 
+ 
+ class ProjectionHead(nn.Module):
+-    """3-layer projection head for SSL representation learning."""
++    """
++    Standard 2-layer projection head (Linear -> BN -> ReLU -> Linear)
++    tailored for contrastive representation learning.
++    """
+ 
+     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):
+         super().__init__()
+         self.net = nn.Sequential(
+             nn.Linear(input_dim, hidden_dim),
+-            nn.BatchNorm1d(hidden_dim),
+-            nn.ReLU(inplace=True),
+-            nn.Linear(hidden_dim, hidden_dim),
+             nn.BatchNorm1d(hidden_dim),
+             nn.ReLU(inplace=True),
+             nn.Linear(hidden_dim, output_dim),
+@@ -79,7 +80,7 @@
+ 
+ 
+ class BarlowTwinsModel(nn.Module):
+-    """ResNet-18 backbone adapted for CIFAR-100 + projection head."""
++    """ResNet-18 backbone adapted for CIFAR-100 + 2-layer projection head."""
+ 
+     def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):
+         super().__init__()
+@@ -101,7 +102,7 @@
+ 
+ 
+ def get_model():
+-    """Return model with backbone and projection head."""
++    """Return model with backbone and 2-layer projection head."""
+     return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
+ 
+ 

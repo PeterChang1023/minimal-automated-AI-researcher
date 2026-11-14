@@ -28,8 +28,8 @@ Legend: ✅ done in repo · 🖥 goes on a slide · ⏳ still to do
 | Handle failures | ✅ | static checks [`air/checks.py`](../air/checks.py), CPU smoke test [`air/smoke_check.py`](../air/smoke_check.py), LLM errors → iters 1–4 recorded as rejected |
 | Handle timeouts | ✅ | `--timeout-min` (default 40), process-group kill in `executor._run` |
 | Experiment limits | ✅ | `--max-iters`, `--max-hours`, `--max-consecutive-failures`, batch cap 512 |
-| One baseline + one LLM candidate completed | ✅ | iter 0 (28.67 %) and iter 5 (51.41 %, accepted) |
-| Next proposal using feedback | ✅ | `runs/main/next_proposal/` (τ 0.2 → 0.1; its rationale cites iter 5) |
+| One baseline + one LLM candidate completed | ✅ | `runs/main`: iter 0 (28.67 %) and iter 5 (51.41 %, accepted); clean run `runs/flash35-clean`: baseline 26.75 % + 5 real candidates, best 54.19 % (iter 4) |
+| Next proposal using feedback | ✅ | `runs/main/next_proposal/` (τ 0.2 → 0.1); `runs/flash35-clean/next_proposal/` (DCL → DCLW) |
 | Accept only higher **comparable** val acc | ✅ | strict `>` in `Run.evaluate`; run fingerprint (budget + eval/split hashes) refuses resume with a different budget |
 | Keep official evaluation unchanged | ✅ | SHA-256 pinned `train_eval_baseline.py`; [`air/eval_wrapper.py`](../air/eval_wrapper.py) only overrides budget/protocol keys |
 | Fix splits, seeds, budgets | ✅ | `split_config.json` pinned (LLM may not edit), seeds in official script, budget forced by wrapper |
@@ -39,7 +39,7 @@ Legend: ✅ done in repo · 🖥 goes on a slide · ⏳ still to do
 
 | Requirement | Status | Where |
 |---|---|---|
-| One visualization from real logs | ✅ | `runs/main/viz/progress.png` + `trace.html`, built by [`scripts/visualize.py`](../scripts/visualize.py) from `history.jsonl` |
+| One visualization from real logs | ✅ | `runs/flash35-clean/viz/progress.png` (main figure), `runs/main/viz/progress.png` + `trace.html`, built by [`scripts/visualize.py`](../scripts/visualize.py) from `history.jsonl` |
 | Trace proposal → code change → execution → result → feedback | ✅ | `trace.html`, iteration 5 card (stages 1–6) |
 | Explain one success or failure | 🖥 | Success: iter 5 (+22.7 pts, diff reviewed). Failure: iters 1–4 (LLM unavailable) recorded, nothing executed, best kept |
 | Distinguish LLM decisions vs program checks | ✅ | purple "LLM decision" vs blue "Program check" stages in `trace.html` |
@@ -60,6 +60,6 @@ Legend: ✅ done in repo · 🖥 goes on a slide · ⏳ still to do
 | README | ✅ | `README.md` |
 | Environment | ✅ | `environment.yml` |
 | Commands | ✅ | README §1–2 |
-| Logs | ✅ | `runs/main/` (full); `full130` only the final line in README |
-| Visualization | ✅ | `runs/main/viz/` |
+| Logs | ✅ | `runs/main/`, `runs/flash35-clean/` + `runs/flash35-clean.log` (full); `full130` only the final line in README |
+| Visualization | ✅ | `runs/flash35-clean/viz/`, `runs/main/viz/` |
 | Disclose LLM, libraries, interventions, failures | ✅ | README header table + §5 Disclosure; failures in §4 table |

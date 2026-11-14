@@ -49,6 +49,9 @@ dies, re-run the same line and it continues from `runs/<name>/history.jsonl`.
 # Part 1 – baseline only, shortened budget
 python -m air.loop --run-name main --baseline-only
 
+# Part 2 – clean 5-iteration run used for the results (section 4a)
+python -m air.loop --run-name flash35-clean --backend gemini --model gemini-3.5-flash --max-iters 5 --propose-next
+
 # Part 2 – one LLM candidate (+ the next proposal, generated from the feedback, not executed)
 python -m air.loop --run-name main --max-iters 1 --propose-next
 
@@ -117,7 +120,48 @@ runs/<run>/
   viz/                     progress.png, trace.html
 ```
 
-## 4. Results (`runs/main`, hinton, 2026-11-13)
+## 4. Results
+
+### 4a. Clean run `runs/flash35-clean` (hinton, 2026-11-14) — main result
+
+A fresh run made after the LLM setup was fixed, so every iteration is a real Gemini proposal.
+`runs/main` (4b below) is kept untouched as the honest record of the first attempt, including its
+setup failures. Same budget fingerprint as `runs/main` (50 pretrain epochs, eval/split SHA-256 identical).
+
+```bash
+python -m air.loop --run-name flash35-clean --backend gemini --model gemini-3.5-flash --max-iters 5 --propose-next
+python scripts/visualize.py runs/flash35-clean && python scripts/plot_loss_curves.py runs/flash35-clean
+```
+
+Visualization: [`runs/flash35-clean/viz/progress.png`](runs/flash35-clean/viz/progress.png),
+[`trace.html`](runs/flash35-clean/viz/trace.html), per-epoch loss
+[`loss_curves.png`](runs/flash35-clean/viz/loss_curves.png). Full console log: [`runs/flash35-clean.log`](runs/flash35-clean.log).
+
+| iter | what the LLM changed (vs current best) | val acc | Δ vs best | decision |
+|---|---|---|---|---|
+| 0 | unmodified Barlow Twins baseline | **26.75 %** | – | baseline |
+| 1 | Barlow Twins loss → NT-Xent (SimCLR), τ = 0.1; drop Gaussian blur; crop scale 0.08–1; lr 0.4 → 0.5 | **53.10 %** | +26.35 | accepted |
+| 2 | NT-Xent → Decoupled Contrastive Learning (DCL) loss | **53.96 %** | +0.86 | accepted |
+| 3 | τ 0.1 → 0.07 and crop scale 0.08 → 0.2 | 51.08 % | −2.88 | rejected |
+| 4 | projection head 3 → 2 layers | **54.19 %** | +0.23 | accepted (best) |
+| 5 | add BatchNorm after the last projection layer | 53.19 % | −0.99 | rejected |
+| next | DCL → DCLW (weighted negatives), **not executed** | – | – | – |
+
+All 6 experiments finished (no LLM, check or runtime failures; ~6–7 min each, ≈ 37 min total).
+Best: iter 4, 54.19 % on the val split, vs 47.04 % for the 130-epoch baseline in our environment.
+Reviewed by the author: the diffs change only loss, projection head, augmentation and the
+pretraining lr; backbone, 512-d features and the linear-probe protocol are untouched
+(`effective_config.json`).
+
+**How to read it.** Iter 1 is a large, robust gain (≈ 20× the seed noise measured in 4b) but it changed
+four things at once, so it is not attributable to one of them. Iters 2 and 4 were accepted by the
+strict single-seed `>` rule with +0.86 and +0.23 pts — *smaller* than the seed-to-seed spread we
+measured (sd 0.36–1.21 pts) and than the val-set standard error (≈ ±0.9 pts). They may be real, but
+this run cannot tell; that is exactly the noise problem Part 4 addresses. The baseline itself came out
+at 26.75 % here vs 28.67 % in `runs/main` with the same code and seed 42, which is GPU
+non-determinism of the same size as the seed spread (26.55–28.67 %).
+
+### 4b. First run `runs/main` (hinton, 2026-11-13)
 
 Visualization: [`runs/main/viz/progress.png`](runs/main/viz/progress.png) and
 [`runs/main/viz/trace.html`](runs/main/viz/trace.html) (open locally; LLM decisions vs program checks are colour-coded).
@@ -173,8 +217,8 @@ Exact strings in `runs/main/run_config.json`. Budget: 50 pretrain epochs ≈ 7 m
 
 ## 5. Disclosure
 
-* **LLM used by the loop**: Google Gemini, model id logged per iteration in `history.jsonl`. The accepted
-  candidate and the next proposal came from `gemini-3.5-flash` via the free AI Studio API. Pro models were
+* **LLM used by the loop**: Google Gemini, model id logged per iteration in `history.jsonl`. All accepted
+  candidates (both runs) and the next proposals came from `gemini-3.5-flash` via the free AI Studio API. Pro models were
   attempted first but were unavailable on the free tier (404 / quota 0), and a Google-account login of the
   Gemini CLI could not be completed on the server; those attempts are iterations 1–3.
 * **LLM used to write this repository**: Claude (Anthropic) via Claude Code, with the author reviewing.
@@ -184,6 +228,9 @@ Exact strings in `runs/main/run_config.json`. Budget: 50 pretrain epochs ≈ 7 m
   `--backend file --response-file ...`, which is logged as `backend: file` in the history.
 * **Failures**: every failed proposal (parse error, static check, smoke test, crash,
   timeout) is kept in `history.jsonl` and shown in the visualization.
+* **Two runs**: `runs/main` (first attempt, iterations 1–4 are LLM-setup failures) and
+  `runs/flash35-clean` (fresh run after the setup was fixed). Neither log was edited; the clean run
+  was started as a new run instead of deleting failures from the old one.
 * **Known limitation**: one seed per candidate on a 3,021-image validation set; the
   standard error of an accuracy near 45 % is about ±0.9 pts, so the strict
   "higher is better" rule can accept noise. See the limitation slide.

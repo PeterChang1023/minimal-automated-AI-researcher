@@ -1,0 +1,447 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Research loop trace</title><style>
+:root{--bg:#fcfcfb;--card:#ffffff;--ink:#0b0b0b;--ink2:#52514e;--line:#e6e5e0;--llm:#6250d6;--llm-bg:#f1effc;
+--prog:#2a78d6;--prog-bg:#eef4fc;--add:#e6f6ee;--del:#fdecec;--acc:#2a78d6;--rej:#b4461d;--bad:#c53030}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1a19;--card:#232322;--ink:#f0efec;--ink2:#c3c2b7;
+--line:#3a3a37;--llm:#9085e9;--llm-bg:#2a2740;--prog:#3987e5;--prog-bg:#1f2b3b;--add:#1d3328;--del:#3b2222;--acc:#3987e5;--rej:#e07a4f;--bad:#e66767}}
+:root[data-theme="dark"]{--bg:#1a1a19;--card:#232322;--ink:#f0efec;--ink2:#c3c2b7;--line:#3a3a37;--llm:#9085e9;--llm-bg:#2a2740;
+--prog:#3987e5;--prog-bg:#1f2b3b;--add:#1d3328;--del:#3b2222;--acc:#3987e5;--rej:#e07a4f;--bad:#e66767}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:24px 16px}h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:0 0 12px}
+.muted{color:var(--ink2);font-weight:400;font-size:13px}.meta{color:var(--ink2);font-size:13px}
+img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0}.legend span{display:flex;align-items:center;gap:6px;font-size:13px}
+.sw{width:12px;height:12px;border-radius:3px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:16px 0}
+.stages{display:grid;gap:8px}.stage{border-left:4px solid;border-radius:6px;padding:8px 12px}
+.stage.llm{border-color:var(--llm);background:var(--llm-bg)}.stage.prog{border-color:var(--prog);background:var(--prog-bg)}
+.stage-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.llm .tag{color:var(--llm)}.prog .tag{color:var(--prog)}.stage-t{font-weight:600}
+dl{margin:6px 0}dt{font-size:12px;color:var(--ink2)}dd{margin:0 0 6px}
+pre{white-space:pre-wrap;word-break:break-word;font:12px/1.45 ui-monospace,Menlo,monospace;margin:6px 0;overflow-x:auto}
+.diff{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px;max-height:480px;overflow:auto}
+.diff .add{background:var(--add);display:block}.diff .del{background:var(--del);display:block}.diff .hunk{color:var(--ink2);display:block}
+.result{font-size:16px}.acc{font-weight:700;font-size:20px}.delta{color:var(--ink2)}
+.dec{font-weight:700;margin-left:8px}.dec.accepted,.dec.baseline{color:var(--acc)}.dec.rejected{color:var(--rej)}
+.err{color:var(--bad)}.pass{color:var(--acc);font-weight:600}.next{border-style:dashed}summary{cursor:pointer;color:var(--ink2)}
+</style></head><body><main><h1>Automated research trace · flash35-clean</h1><p class='meta'>FML-bench Representation_Learning_solo_learn · 50 pretrain epochs (upstream 130) · linear eval 100 ep · split val_ratio 0.057 seed 42 · LLM gemini gemini-3.5-flash · GPU NVIDIA H100 NVL, 95830 MiB, 590.48.01 · torch 2.1.0+cu121<br>Best: iter 4 at 54.19% · 5 candidates · selection on val only, hidden test never run by the loop</p><div class='legend'><span><i class='sw' style='background:var(--llm)'></i>LLM decision</span><span><i class='sw' style='background:var(--prog)'></i>Program check (deterministic code)</span></div><img src='progress.png' alt='Validation accuracy per iteration with best-so-far line'><section class='card'><h2>Iteration 0 <span class='muted'>· baseline · 2026-11-14T01:39:27+08:00</span></h2><div class='stages'><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>Proposal</span></div><p>None: unmodified upstream FML-bench <code>algorithm.py</code>.</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 434.0 s · pretrain loss ep1: 1620.7, ep20: 611.1, ep40: 468.4</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>26.75%</span> <span class='dec baseline'>baseline</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>Baseline under this budget: val_acc=0.2675.</pre></div></div></section><section class='card'><h2>Iteration 1 <span class='muted'>· candidate · 2026-11-14T01:40:03+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Switching from Barlow Twins redundancy reduction loss to SimCLR (NT-Xent) loss and removing excessive Gaussian blur for 32x32 images will significantly accelerate representation learning within 50 pretraining epochs.</dd><dt>Rationale</dt><dd>Barlow Twins fits a 2048x2048 cross-correlation matrix to identity, which requires many epochs (800+) to converge. In a short 50-epoch budget (~4700 steps at batch 512), InfoNCE / SimCLR directly pulls positive pairs together and pushes batch negatives apart in normalized hyperspace, yielding much stronger gradients early in pretraining. Additionally, Gaussian blur on low-resolution 32x32 CIFAR images removes essential high-frequency spatial features, so disabling Gaussian blur preserves informative features.</dd><dt>Expected effect</dt><dd>Substantially higher validation linear-probe accuracy compared to baseline (0.2675).</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 0)</span></div><p>Replaced Barlow Twins loss with NT-Xent (SimCLR) loss in `BarlowTwinsLoss`, adjusted augmentation to omit Gaussian blur for 32x32 CIFAR images and use standard crop scale (0.08, 1.0), and tuned learning rate to 0.5 for SimCLR with SGD.</p><details><summary>show diff (51 + / 42 − lines)</summary><pre class='diff'><span class=''>--- iter_000/algorithm.py (best)</span>
+<span class=''>+++ iter_001/algorithm.py</span>
+<span class='hunk'>@@ -1,51 +1,56 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class='del'>-Baseline self-supervised learning algorithm: Barlow Twins on CIFAR-100.</span>
+<span class='del'>-</span>
+<span class='del'>-Barlow Twins learns representations by minimizing redundancy between</span>
+<span class='del'>-embedding dimensions via a cross-correlation loss. It does NOT require</span>
+<span class='del'>-negative pairs or momentum encoders — just two augmented views.</span>
+<span class='del'>-</span>
+<span class='del'>-This is a COMPUTE-CONSTRAINED setting: only 130 pretrain epochs (batch 512)</span>
+<span class='del'>-(vs 1000+ standard). Representations will not fully converge (~45-55%</span>
+<span class='del'>-linear probe accuracy vs ~70%+ at full training).</span>
+<span class='del'>-</span>
+<span class='del'>-Agents should modify this file to improve SSL under limited compute:</span>
+<span class='del'>-- Better loss functions (VICReg, DINO, SimCLR, etc.)</span>
+<span class='del'>-- Better augmentation strategies</span>
+<span class='del'>-- Better projection head design</span>
+<span class='del'>-- Learning rate scheduling</span>
+<span class='del'>-- Multi-crop strategies</span>
+<span class='add'>+Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:</span>
+<span class='add'>+InfoNCE / SimCLR loss with optimized CIFAR augmentations.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='add'>+import torch.nn.functional as F</span>
+<span class=''> import torchvision.models as models</span>
+<span class=''> import torchvision.transforms as transforms</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsLoss(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;Barlow Twins loss: cross-correlation matrix → identity.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;</span>
+<span class='add'>+    SimCLR (NT-Xent) loss implementation wrapped in the signature expected</span>
+<span class='add'>+    by the pretraining script (accepting lambda_param and embedding_dim).</span>
+<span class='add'>+    </span>
+<span class='add'>+    InfoNCE loss converges significantly faster than Barlow Twins in short</span>
+<span class='add'>+    pretraining regimes (e.g. 50 epochs).</span>
+<span class='add'>+    &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class='del'>-    def __init__(self, lambda_param=5e-3, embedding_dim=2048):</span>
+<span class='add'>+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.1):</span>
+<span class=''>         super().__init__()</span>
+<span class=''>         self.lambda_param = lambda_param</span>
+<span class='del'>-        self.bn = nn.BatchNorm1d(embedding_dim, affine=False)</span>
+<span class='add'>+        self.embedding_dim = embedding_dim</span>
+<span class='add'>+        self.temperature = temperature</span>
+<span class=''> </span>
+<span class=''>     def forward(self, z1, z2):</span>
+<span class='del'>-        z1 = self.bn(z1)</span>
+<span class='del'>-        z2 = self.bn(z2)</span>
+<span class='del'>-        batch_size = z1.shape[0]</span>
+<span class='add'>+        # L2 normalize projection vectors</span>
+<span class='add'>+        z1 = F.normalize(z1, dim=1)</span>
+<span class='add'>+        z2 = F.normalize(z2, dim=1)</span>
+<span class=''> </span>
+<span class='del'>-        # Cross-correlation matrix</span>
+<span class='del'>-        c = z1.T @ z2 / batch_size</span>
+<span class='add'>+        batch_size = z1.size(0)</span>
+<span class='add'>+        # Concatenate features from both views: [2 * batch_size, dim]</span>
+<span class='add'>+        z = torch.cat([z1, z2], dim=0)</span>
+<span class=''> </span>
+<span class='del'>-        # Loss: on-diagonal → 1, off-diagonal → 0</span>
+<span class='del'>-        on_diag = (1 - c.diagonal()).pow(2).sum()</span>
+<span class='del'>-        off_diag = c.flatten()[:-1].view(c.shape[0] - 1, c.shape[0] + 1)[:, 1:].flatten().pow(2).sum()</span>
+<span class='del'>-        return on_diag + self.lambda_param * off_diag</span>
+<span class='add'>+        # Compute cosine similarity matrix scaled by temperature: [2N, 2N]</span>
+<span class='add'>+        sim = torch.matmul(z, z.T) / self.temperature</span>
+<span class='add'>+</span>
+<span class='add'>+        # Mask out self-contrast (diagonal)</span>
+<span class='add'>+        mask = torch.eye(2 * batch_size, dtype=torch.bool, device=z.device)</span>
+<span class='add'>+        sim.masked_fill_(mask, -1e9)</span>
+<span class='add'>+</span>
+<span class='add'>+        # Targets: for view 1 item i -&gt; view 2 item i + N; for view 2 item i -&gt; view 1 item i</span>
+<span class='add'>+        labels = torch.cat([</span>
+<span class='add'>+            torch.arange(batch_size, 2 * batch_size, device=z.device),</span>
+<span class='add'>+            torch.arange(0, batch_size, device=z.device)</span>
+<span class='add'>+        ], dim=0)</span>
+<span class='add'>+</span>
+<span class='add'>+        return F.cross_entropy(sim, labels)</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;3-layer projection head for Barlow Twins.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;3-layer projection head for SSL representation learning.&quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class='hunk'>@@ -64,17 +69,18 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsModel(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;ResNet-18 backbone + projection head for Barlow Twins.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;ResNet-18 backbone adapted for CIFAR-100 + projection head.&quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class='del'>-        # ResNet-18 backbone (remove final FC)</span>
+<span class=''>         backbone = models.resnet18(weights=None)</span>
+<span class=''>         self.backbone_dim = backbone.fc.in_features  # 512</span>
+<span class=''>         backbone.fc = nn.Identity()</span>
+<span class='del'>-        # Adapt for CIFAR-100 (32x32): smaller first conv, no maxpool</span>
+<span class='del'>-        backbone.conv1 = nn.Conv2d(3, 64, 3, 1, 1, bias=False)</span>
+<span class='add'>+</span>
+<span class='add'>+        # Adapt for CIFAR-100 (32x32): 3x3 conv1, no maxpool</span>
+<span class='add'>+        backbone.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)</span>
+<span class=''>         backbone.maxpool = nn.Identity()</span>
+<span class='add'>+</span>
+<span class=''>         self.backbone = backbone</span>
+<span class=''>         self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)</span>
+<span class=''> </span>
+<span class='hunk'>@@ -85,35 +91,37 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_model():</span>
+<span class='del'>-    &quot;&quot;&quot;Return Barlow Twins model.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return model with backbone and projection head.&quot;&quot;&quot;</span>
+<span class=''>     return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_training_config():</span>
+<span class='del'>-    &quot;&quot;&quot;Return Barlow Twins training config (compute-constrained).&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return pretraining hyperparameters tuned for SimCLR with SGD.&quot;&quot;&quot;</span>
+<span class=''>     return {</span>
+<span class='del'>-        &#x27;pretrain_epochs&#x27;: 130,</span>
+<span class='add'>+        &#x27;pretrain_epochs&#x27;: 50,</span>
+<span class=''>         &#x27;linear_eval_epochs&#x27;: 100,</span>
+<span class=''>         &#x27;batch_size&#x27;: 512,</span>
+<span class='del'>-        &#x27;lr&#x27;: 0.4,</span>
+<span class='add'>+        &#x27;lr&#x27;: 0.5,</span>
+<span class=''>         &#x27;weight_decay&#x27;: 1e-4,</span>
+<span class='del'>-        &#x27;lambda_param&#x27;: 5e-3,       # Barlow Twins off-diagonal penalty</span>
+<span class='add'>+        &#x27;lambda_param&#x27;: 5e-3,</span>
+<span class=''>         &#x27;linear_lr&#x27;: 0.1,</span>
+<span class=''>         &#x27;linear_batch_size&#x27;: 256,</span>
+<span class=''>     }</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_augmentation():</span>
+<span class='del'>-    &quot;&quot;&quot;Return augmentation transforms for Barlow Twins.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;</span>
+<span class='add'>+    Return augmentation transforms tailored for CIFAR-100 32x32 images.</span>
+<span class='add'>+    Gaussian blur is omitted as it destroys key spatial information at 32x32.</span>
+<span class='add'>+    &quot;&quot;&quot;</span>
+<span class=''>     mean = (0.5071, 0.4867, 0.4408)</span>
+<span class=''>     std = (0.2675, 0.2565, 0.2761)</span>
+<span class=''> </span>
+<span class=''>     return transforms.Compose([</span>
+<span class='del'>-        transforms.RandomResizedCrop(32, scale=(0.2, 1.0)),</span>
+<span class='del'>-        transforms.RandomHorizontalFlip(),</span>
+<span class='add'>+        transforms.RandomResizedCrop(32, scale=(0.08, 1.0)),</span>
+<span class='add'>+        transforms.RandomHorizontalFlip(p=0.5),</span>
+<span class=''>         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),</span>
+<span class=''>         transforms.RandomGrayscale(p=0.2),</span>
+<span class='del'>-        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.5),</span>
+<span class=''>         transforms.ToTensor(),</span>
+<span class=''>         transforms.Normalize(mean, std),</span>
+<span class=''>     ])</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 362.3 s · pretrain loss ep1: 5.7, ep20: 2.0, ep40: 1.5</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>53.10%</span> <span class=delta>+26.35 pts vs best</span> <span class='dec accepted'>accepted</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>ACCEPTED: val_acc 0.5310 &gt; best 0.2675 (+26.35 pts). Now the best.</pre></div></div></section><section class='card'><h2>Iteration 2 <span class='muted'>· candidate · 2026-11-14T01:46:56+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Replacing standard InfoNCE (NT-Xent) loss with Decoupled Contrastive Learning (DCL) loss will accelerate representation learning within the 50-epoch budget by eliminating the positive-pair suppression effect in the loss denominator.</dd><dt>Rationale</dt><dd>In standard InfoNCE (used in iter 1), as positive similarity increases, the positive pair term exp(s_pos / tau) dominates the loss denominator, causing the gradients of all negative samples to rapidly diminish (positive pair saturation). Decoupled Contrastive Learning (Yeh et al., CVPR 2022) removes the positive term from the denominator, ensuring persistent repelling gradients from negative pairs and significantly improving linear probe performance under short pretraining schedules.</dd><dt>Expected effect</dt><dd>Faster feature convergence and improved feature quality within 50 epochs, leading to a higher top-1 linear evaluation accuracy on CIFAR-100 compared to iter 1 (0.5310).</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>Replaced NT-Xent (InfoNCE) loss calculation in `BarlowTwinsLoss` with the Decoupled Contrastive Learning (DCL) loss formulation while keeping all other architecture and hyperparameter settings from iter 1 unchanged.</p><details><summary>show diff (24 + / 13 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_002/algorithm.py</span>
+<span class='hunk'>@@ -1,6 +1,6 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:</span>
+<span class='del'>-InfoNCE / SimCLR loss with optimized CIFAR augmentations.</span>
+<span class='add'>+Decoupled Contrastive Learning (DCL) loss with optimized CIFAR augmentations.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -11,11 +11,11 @@</span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsLoss(nn.Module):</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class='del'>-    SimCLR (NT-Xent) loss implementation wrapped in the signature expected</span>
+<span class='del'>-    by the pretraining script (accepting lambda_param and embedding_dim).</span>
+<span class='add'>+    Decoupled Contrastive Learning (DCL) loss implementation wrapped in the signature</span>
+<span class='add'>+    expected by the pretraining script (accepting lambda_param and embedding_dim).</span>
+<span class=''>     </span>
+<span class='del'>-    InfoNCE loss converges significantly faster than Barlow Twins in short</span>
+<span class='del'>-    pretraining regimes (e.g. 50 epochs).</span>
+<span class='add'>+    DCL removes the positive pair term from the InfoNCE denominator, preventing positive</span>
+<span class='add'>+    pair saturation and maintaining strong negative repulsion gradients throughout training.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.1):</span>
+<span class='hunk'>@@ -36,17 +36,27 @@</span>
+<span class=''>         # Compute cosine similarity matrix scaled by temperature: [2N, 2N]</span>
+<span class=''>         sim = torch.matmul(z, z.T) / self.temperature</span>
+<span class=''> </span>
+<span class='del'>-        # Mask out self-contrast (diagonal)</span>
+<span class='del'>-        mask = torch.eye(2 * batch_size, dtype=torch.bool, device=z.device)</span>
+<span class='del'>-        sim.masked_fill_(mask, -1e9)</span>
+<span class='del'>-</span>
+<span class='del'>-        # Targets: for view 1 item i -&gt; view 2 item i + N; for view 2 item i -&gt; view 1 item i</span>
+<span class='del'>-        labels = torch.cat([</span>
+<span class='add'>+        # Target indices for positive pairs</span>
+<span class='add'>+        pos_idx = torch.cat([</span>
+<span class=''>             torch.arange(batch_size, 2 * batch_size, device=z.device),</span>
+<span class=''>             torch.arange(0, batch_size, device=z.device)</span>
+<span class=''>         ], dim=0)</span>
+<span class=''> </span>
+<span class='del'>-        return F.cross_entropy(sim, labels)</span>
+<span class='add'>+        # Extract positive similarities: shape [2N]</span>
+<span class='add'>+        pos_sim = sim[torch.arange(2 * batch_size, device=z.device), pos_idx]</span>
+<span class='add'>+</span>
+<span class='add'>+        # Mask out self-contrast (diagonal) and positive pairs from negative set</span>
+<span class='add'>+        neg_mask = torch.ones((2 * batch_size, 2 * batch_size), dtype=torch.bool, device=z.device)</span>
+<span class='add'>+        neg_mask.fill_diagonal_(False)</span>
+<span class='add'>+        neg_mask[torch.arange(2 * batch_size, device=z.device), pos_idx] = False</span>
+<span class='add'>+</span>
+<span class='add'>+        # Mask invalid negative positions with a large negative number</span>
+<span class='add'>+        sim_neg = sim.masked_fill(~neg_mask, -1e9)</span>
+<span class='add'>+</span>
+<span class='add'>+        # DCL loss: - pos_sim + log( sum_{neg} exp(sim_neg) )</span>
+<span class='add'>+        loss = -pos_sim + torch.logsumexp(sim_neg, dim=1)</span>
+<span class='add'>+</span>
+<span class='add'>+        return loss.mean()</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span>
+<span class='hunk'>@@ -96,7 +106,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_training_config():</span>
+<span class='del'>-    &quot;&quot;&quot;Return pretraining hyperparameters tuned for SimCLR with SGD.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return pretraining hyperparameters tuned for contrastive learning with SGD.&quot;&quot;&quot;</span>
+<span class=''>     return {</span>
+<span class=''>         &#x27;pretrain_epochs&#x27;: 50,</span>
+<span class=''>         &#x27;linear_eval_epochs&#x27;: 100,</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 367.9 s · pretrain loss ep1: 5.7, ep20: 1.4, ep40: 0.7</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>53.96%</span> <span class=delta>+0.86 pts vs best</span> <span class='dec accepted'>accepted</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>ACCEPTED: val_acc 0.5396 &gt; best 0.5310 (+0.86 pts). Now the best.</pre></div></div></section><section class='card'><h2>Iteration 3 <span class='muted'>· candidate · 2026-11-14T01:53:52+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Lowering the contrastive temperature from 0.1 to 0.07 and setting the minimum RandomResizedCrop scale from 0.08 to 0.20 will improve DCL feature learning on 32x32 CIFAR-100 images by sharpening hard-negative gradients and preventing over-cropping.</dd><dt>Rationale</dt><dd>In iter 2, DCL loss improved linear evaluation accuracy to 0.5396. However, two hyperparameter settings are suboptimal for low-resolution CIFAR-100 images: (1) ImageNet-default crop scale (0.08, 1.0) crops down to 9x9 pixels, often discarding all semantic content and creating noisy positive pairs; a minimum scale of 0.20 (14x14 pixels) preserves recognizable semantic structures. (2) Standard contrastive literature (SimCLR, MoCo v2, DCL) demonstrates that tau=0.07 provides stronger repulsion for hard negatives and tighter alignment for fine-grained datasets like CIFAR-100 compared to tau=0.1.</dd><dt>Expected effect</dt><dd>Stronger hard-negative gradients and semantically consistent positive crops will accelerate representation learning within 50 epochs, improving top-1 linear evaluation accuracy beyond 0.5396.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 2)</span></div><p>In BarlowTwinsLoss, set default temperature from 0.1 to 0.07. In get_augmentation(), adjust RandomResizedCrop scale from (0.08, 1.0) to (0.2, 1.0).</p><details><summary>show diff (5 + / 3 − lines)</summary><pre class='diff'><span class=''>--- iter_002/algorithm.py (best)</span>
+<span class=''>+++ iter_003/algorithm.py</span>
+<span class='hunk'>@@ -1,6 +1,6 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:</span>
+<span class='del'>-Decoupled Contrastive Learning (DCL) loss with optimized CIFAR augmentations.</span>
+<span class='add'>+Decoupled Contrastive Learning (DCL) loss with temperature tau=0.07 and CIFAR-adapted crop scaling.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -18,7 +18,7 @@</span>
+<span class=''>     pair saturation and maintaining strong negative repulsion gradients throughout training.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class='del'>-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.1):</span>
+<span class='add'>+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.07):</span>
+<span class=''>         super().__init__()</span>
+<span class=''>         self.lambda_param = lambda_param</span>
+<span class=''>         self.embedding_dim = embedding_dim</span>
+<span class='hunk'>@@ -122,13 +122,14 @@</span>
+<span class=''> def get_augmentation():</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''>     Return augmentation transforms tailored for CIFAR-100 32x32 images.</span>
+<span class='add'>+    Scale minimum set to 0.20 to prevent extreme semantic loss from over-cropping low-res images.</span>
+<span class=''>     Gaussian blur is omitted as it destroys key spatial information at 32x32.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''>     mean = (0.5071, 0.4867, 0.4408)</span>
+<span class=''>     std = (0.2675, 0.2565, 0.2761)</span>
+<span class=''> </span>
+<span class=''>     return transforms.Compose([</span>
+<span class='del'>-        transforms.RandomResizedCrop(32, scale=(0.08, 1.0)),</span>
+<span class='add'>+        transforms.RandomResizedCrop(32, scale=(0.2, 1.0)),</span>
+<span class=''>         transforms.RandomHorizontalFlip(p=0.5),</span>
+<span class=''>         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),</span>
+<span class=''>         transforms.RandomGrayscale(p=0.2),</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 368.7 s · pretrain loss ep1: 5.7, ep20: -1.5, ep40: -2.8</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>51.08%</span> <span class=delta>-2.88 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.5108 &lt;= best 0.5396 (-2.88 pts). Best code kept.</pre></div></div></section><section class='card'><h2>Iteration 4 <span class='muted'>· candidate · 2026-11-14T02:01:07+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Replacing the 3-layer projection head with a standard 2-layer projection head (Linear-BN-ReLU-Linear) will accelerate representation learning and improve validation accuracy under a 50-epoch budget by reducing head over-parameterization and facilitating faster gradient flow into the backbone.</dd><dt>Rationale</dt><dd>In iter 1 and iter 2, switching to contrastive/DCL losses yielded huge accuracy gains (+27.21 pts over baseline), but retained the 3-layer projection head from the original Barlow Twins architecture. For contrastive learning (SimCLR/DCL) under short pretraining budgets (50 epochs), a 3-layer MLP adds ~4.2 million unnecessary parameters in the discarded head, slowing down convergence. Standard contrastive learning literature (Chen et al., 2020) shows that a 2-layer projection head is optimal for representation quality.</dd><dt>Expected effect</dt><dd>Faster convergence during 50 pretraining epochs and higher linear-probe accuracy on CIFAR-100 validation set.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 2)</span></div><p>In `ProjectionHead`, simplified the architecture from 3 linear layers to 2 linear layers (Linear(512, 2048) -&gt; BatchNorm1d -&gt; ReLU -&gt; Linear(2048, 2048)), keeping all DCL loss parameters and augmentations identical to iter 2.</p><details><summary>show diff (9 + / 7 − lines)</summary><pre class='diff'><span class=''>--- iter_002/algorithm.py (best)</span>
+<span class=''>+++ iter_004/algorithm.py</span>
+<span class='hunk'>@@ -1,6 +1,7 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:</span>
+<span class='del'>-Decoupled Contrastive Learning (DCL) loss with optimized CIFAR augmentations.</span>
+<span class='add'>+Decoupled Contrastive Learning (DCL) loss with a streamlined 2-layer projection head</span>
+<span class='add'>+and optimized CIFAR augmentations.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -60,15 +61,15 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;3-layer projection head for SSL representation learning.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;</span>
+<span class='add'>+    Standard 2-layer projection head (Linear -&gt; BN -&gt; ReLU -&gt; Linear)</span>
+<span class='add'>+    tailored for contrastive representation learning.</span>
+<span class='add'>+    &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class=''>         self.net = nn.Sequential(</span>
+<span class=''>             nn.Linear(input_dim, hidden_dim),</span>
+<span class='del'>-            nn.BatchNorm1d(hidden_dim),</span>
+<span class='del'>-            nn.ReLU(inplace=True),</span>
+<span class='del'>-            nn.Linear(hidden_dim, hidden_dim),</span>
+<span class=''>             nn.BatchNorm1d(hidden_dim),</span>
+<span class=''>             nn.ReLU(inplace=True),</span>
+<span class=''>             nn.Linear(hidden_dim, output_dim),</span>
+<span class='hunk'>@@ -79,7 +80,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsModel(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;ResNet-18 backbone adapted for CIFAR-100 + projection head.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;ResNet-18 backbone adapted for CIFAR-100 + 2-layer projection head.&quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class='hunk'>@@ -101,7 +102,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_model():</span>
+<span class='del'>-    &quot;&quot;&quot;Return model with backbone and projection head.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return model with backbone and 2-layer projection head.&quot;&quot;&quot;</span>
+<span class=''>     return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)</span>
+<span class=''> </span>
+<span class=''> </span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 362.5 s · pretrain loss ep1: 5.9, ep20: 1.3, ep40: 0.6</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>54.19%</span> <span class=delta>+0.23 pts vs best</span> <span class='dec accepted'>accepted</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>ACCEPTED: val_acc 0.5419 &gt; best 0.5396 (+0.23 pts). Now the best.</pre></div></div></section><section class='card'><h2>Iteration 5 <span class='muted'>· candidate · 2026-11-14T02:07:50+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Adding a Batch Normalization layer to the final layer of the 2-layer projection head (Linear -&gt; BN -&gt; ReLU -&gt; Linear -&gt; BN, following SimCLR v2) will prevent dimensional variance collapse across projector dimensions and accelerate representation learning in 50 epochs.</dd><dt>Rationale</dt><dd>In iter 4, streamlining the projection head to 2 layers yielded a boost to 0.5419 val acc. In SimCLR v2, adding BatchNorm to the output layer of the projector before L2 normalization ensured that each feature dimension maintains uniform scale across the mini-batch, improving gradient flow into the backbone during fast cosine-decay pretraining schedules.</dd><dt>Expected effect</dt><dd>Faster feature convergence and improved feature representation, leading to higher linear evaluation top-1 validation accuracy.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 4)</span></div><p>In `ProjectionHead`, added `nn.BatchNorm1d(output_dim)` after the final linear layer.</p><details><summary>show diff (11 + / 6 − lines)</summary><pre class='diff'><span class=''>--- iter_004/algorithm.py (best)</span>
+<span class=''>+++ iter_005/algorithm.py</span>
+<span class='hunk'>@@ -1,8 +1,11 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:</span>
+<span class='del'>-Decoupled Contrastive Learning (DCL) loss with a streamlined 2-layer projection head</span>
+<span class='del'>-and optimized CIFAR augmentations.</span>
+<span class='add'>+Decoupled Contrastive Learning (DCL) loss with a 2-layer projection head featuring</span>
+<span class='add'>+output Batch Normalization (SimCLR v2 style) and optimized CIFAR augmentations.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class='add'>+import math</span>
+<span class='add'>+import numpy as np</span>
+<span class='add'>+from PIL import Image</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class=''> import torch.nn.functional as F</span>
+<span class='hunk'>@@ -62,8 +65,8 @@</span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class='del'>-    Standard 2-layer projection head (Linear -&gt; BN -&gt; ReLU -&gt; Linear)</span>
+<span class='del'>-    tailored for contrastive representation learning.</span>
+<span class='add'>+    2-layer projection head with Batch Normalization on both layers</span>
+<span class='add'>+    (Linear -&gt; BN -&gt; ReLU -&gt; Linear -&gt; BN) following SimCLR v2 architecture design.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):</span>
+<span class='hunk'>@@ -73,6 +76,7 @@</span>
+<span class=''>             nn.BatchNorm1d(hidden_dim),</span>
+<span class=''>             nn.ReLU(inplace=True),</span>
+<span class=''>             nn.Linear(hidden_dim, output_dim),</span>
+<span class='add'>+            nn.BatchNorm1d(output_dim),</span>
+<span class=''>         )</span>
+<span class=''> </span>
+<span class=''>     def forward(self, x):</span>
+<span class='hunk'>@@ -80,7 +84,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsModel(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;ResNet-18 backbone adapted for CIFAR-100 + 2-layer projection head.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;ResNet-18 backbone adapted for CIFAR-100 + 2-layer BN projection head.&quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class='hunk'>@@ -102,7 +106,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_model():</span>
+<span class='del'>-    &quot;&quot;&quot;Return model with backbone and 2-layer projection head.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return model with backbone and 2-layer BN projection head.&quot;&quot;&quot;</span>
+<span class=''>     return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)</span>
+<span class=''> </span>
+<span class=''> </span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 362.7 s · pretrain loss ep1: 6.3, ep20: 1.4, ep40: 0.7</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>53.19%</span> <span class=delta>-0.99 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.5319 &lt;= best 0.5419 (-0.99 pts). Best code kept.</pre></div></div></section><section class='card next'><h2>Next proposal</h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>Propose (uses feedback from iters [0, 1, 2, 3, 4, 5])</span></div><dl><dt>Hypothesis</dt><dd>Upgrading Decoupled Contrastive Learning (DCL) to DCL with Hard Negative Weighting (DCLW) will improve representation quality by downweighting false negative pairs while preserving strong repulsion for distinct negative pairs.</dd><dt>Rationale</dt><dd>Iter 2 showed that DCL improves over InfoNCE (0.5396 vs 0.5310) by eliminating positive-pair terms from the loss denominator. Iter 4 further improved performance to 0.5419 with a 2-layer projection head. However, standard DCL treats all negative pairs equally in the exponential sum. In CIFAR-100, images from the same underlying class often act as negative pairs (false negatives) with high similarity z_i^T z_j ~ 1. DCLW (Yeh et al., CVPR 2022) scales negative pair contributions by their squared distance w_ij = 2 - 2 z_i^T z_j, suppressing false-negative repulsions and enhancing feature clustering within 50 epochs.</dd><dt>Expected effect</dt><dd>Validation linear-probe top-1 accuracy will increase beyond 0.5419.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>Modify: diff vs best</span></div><p>Updated `BarlowTwinsLoss` forward pass to compute DCLW loss using distance-based negative weighting w_ij = 2.0 - 2.0 * (z_i^T z_j), implemented stably via log-space addition `sim_neg + log(w_ij)` inside `logsumexp`.</p><details><summary>show diff</summary><pre class='diff'><span class=''>--- iter_004/algorithm.py (best)</span>
+<span class=''>+++ next_proposal/algorithm.py</span>
+<span class='hunk'>@@ -1,7 +1,7 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:</span>
+<span class='del'>-Decoupled Contrastive Learning (DCL) loss with a streamlined 2-layer projection head</span>
+<span class='del'>-and optimized CIFAR augmentations.</span>
+<span class='add'>+Decoupled Contrastive Learning with Hard Negative Weighting (DCLW) loss with a </span>
+<span class='add'>+streamlined 2-layer projection head and optimized CIFAR augmentations.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -12,11 +12,13 @@</span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsLoss(nn.Module):</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class='del'>-    Decoupled Contrastive Learning (DCL) loss implementation wrapped in the signature</span>
+<span class='del'>-    expected by the pretraining script (accepting lambda_param and embedding_dim).</span>
+<span class='add'>+    Decoupled Contrastive Learning with Hard Negative Weighting (DCLW) loss.</span>
+<span class=''>     </span>
+<span class='del'>-    DCL removes the positive pair term from the InfoNCE denominator, preventing positive</span>
+<span class='del'>-    pair saturation and maintaining strong negative repulsion gradients throughout training.</span>
+<span class='add'>+    DCL removes the positive pair term from the InfoNCE denominator, and DCLW</span>
+<span class='add'>+    weights negative pairs proportional to their squared Euclidean distance </span>
+<span class='add'>+    w_ij = 2 - 2 * (z_i^T z_j). This downweights false negative pairs (same class </span>
+<span class='add'>+    images with high similarity) and emphasizes true hard negatives, leading to </span>
+<span class='add'>+    better semantic representation alignment in few pretraining epochs.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.1):</span>
+<span class='hunk'>@@ -34,8 +36,11 @@</span>
+<span class=''>         # Concatenate features from both views: [2 * batch_size, dim]</span>
+<span class=''>         z = torch.cat([z1, z2], dim=0)</span>
+<span class=''> </span>
+<span class='del'>-        # Compute cosine similarity matrix scaled by temperature: [2N, 2N]</span>
+<span class='del'>-        sim = torch.matmul(z, z.T) / self.temperature</span>
+<span class='add'>+        # Raw cosine similarity matrix in [-1, 1]: [2N, 2N]</span>
+<span class='add'>+        raw_sim = torch.matmul(z, z.T)</span>
+<span class='add'>+</span>
+<span class='add'>+        # Cosine similarity matrix scaled by temperature: [2N, 2N]</span>
+<span class='add'>+        sim = raw_sim / self.temperature</span>
+<span class=''> </span>
+<span class=''>         # Target indices for positive pairs</span>
+<span class=''>         pos_idx = torch.cat([</span>
+<span class='hunk'>@@ -51,10 +56,16 @@</span>
+<span class=''>         neg_mask.fill_diagonal_(False)</span>
+<span class=''>         neg_mask[torch.arange(2 * batch_size, device=z.device), pos_idx] = False</span>
+<span class=''> </span>
+<span class='add'>+        # Compute DCLW weights w_ij = 2.0 - 2.0 * raw_sim = ||z_i - z_j||^2</span>
+<span class='add'>+        w_ij = torch.clamp(2.0 - 2.0 * raw_sim, min=1e-7)</span>
+<span class='add'>+</span>
+<span class='add'>+        # Add log(w_ij) in log-space for numerical stability: log(w_ij * exp(sim)) = sim + log(w_ij)</span>
+<span class='add'>+        sim_weighted = sim + torch.log(w_ij)</span>
+<span class='add'>+</span>
+<span class=''>         # Mask invalid negative positions with a large negative number</span>
+<span class='del'>-        sim_neg = sim.masked_fill(~neg_mask, -1e9)</span>
+<span class='add'>+        sim_neg = sim_weighted.masked_fill(~neg_mask, -1e9)</span>
+<span class=''> </span>
+<span class='del'>-        # DCL loss: - pos_sim + log( sum_{neg} exp(sim_neg) )</span>
+<span class='add'>+        # DCLW loss: - pos_sim + log( sum_{neg} w_ij * exp(sim_neg) )</span>
+<span class=''>         loss = -pos_sim + torch.logsumexp(sim_neg, dim=1)</span>
+<span class=''> </span>
+<span class=''>         return loss.mean()</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>Status</span></div><p>proposed, <b>not executed</b></p></div></div></section></main></body></html>

@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Lowering the contrastive temperature from 0.1 to 0.07 and setting the minimum RandomResizedCrop scale from 0.08 to 0.20 will improve DCL feature learning on 32x32 CIFAR-100 images by sharpening hard-negative gradients and preventing over-cropping.",
+  "rationale": "In iter 2, DCL loss improved linear evaluation accuracy to 0.5396. However, two hyperparameter settings are suboptimal for low-resolution CIFAR-100 images: (1) ImageNet-default crop scale (0.08, 1.0) crops down to 9x9 pixels, often discarding all semantic content and creating noisy positive pairs; a minimum scale of 0.20 (14x14 pixels) preserves recognizable semantic structures. (2) Standard contrastive literature (SimCLR, MoCo v2, DCL) demonstrates that tau=0.07 provides stronger repulsion for hard negatives and tighter alignment for fine-grained datasets like CIFAR-100 compared to tau=0.1.",
+  "expected_effect": "Stronger hard-negative gradients and semantically consistent positive crops will accelerate representation learning within 50 epochs, improving top-1 linear evaluation accuracy beyond 0.5396.",
+  "change_summary": "In BarlowTwinsLoss, set default temperature from 0.1 to 0.07. In get_augmentation(), adjust RandomResizedCrop scale from (0.08, 1.0) to (0.2, 1.0)."
+}

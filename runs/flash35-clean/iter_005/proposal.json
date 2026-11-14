@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Adding a Batch Normalization layer to the final layer of the 2-layer projection head (Linear -> BN -> ReLU -> Linear -> BN, following SimCLR v2) will prevent dimensional variance collapse across projector dimensions and accelerate representation learning in 50 epochs.",
+  "rationale": "In iter 4, streamlining the projection head to 2 layers yielded a boost to 0.5419 val acc. In SimCLR v2, adding BatchNorm to the output layer of the projector before L2 normalization ensured that each feature dimension maintains uniform scale across the mini-batch, improving gradient flow into the backbone during fast cosine-decay pretraining schedules.",
+  "expected_effect": "Faster feature convergence and improved feature representation, leading to higher linear evaluation top-1 validation accuracy.",
+  "change_summary": "In `ProjectionHead`, added `nn.BatchNorm1d(output_dim)` after the final linear layer."
+}

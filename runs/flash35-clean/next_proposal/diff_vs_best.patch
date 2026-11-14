@@ -1,0 +1,63 @@
+--- iter_004/algorithm.py (best)
++++ next_proposal/algorithm.py
+@@ -1,7 +1,7 @@
+ """
+ Self-supervised learning algorithm for CIFAR-100 under severe compute constraints:
+-Decoupled Contrastive Learning (DCL) loss with a streamlined 2-layer projection head
+-and optimized CIFAR augmentations.
++Decoupled Contrastive Learning with Hard Negative Weighting (DCLW) loss with a 
++streamlined 2-layer projection head and optimized CIFAR augmentations.
+ """
+ import torch
+ import torch.nn as nn
+@@ -12,11 +12,13 @@
+ 
+ class BarlowTwinsLoss(nn.Module):
+     """
+-    Decoupled Contrastive Learning (DCL) loss implementation wrapped in the signature
+-    expected by the pretraining script (accepting lambda_param and embedding_dim).
++    Decoupled Contrastive Learning with Hard Negative Weighting (DCLW) loss.
+     
+-    DCL removes the positive pair term from the InfoNCE denominator, preventing positive
+-    pair saturation and maintaining strong negative repulsion gradients throughout training.
++    DCL removes the positive pair term from the InfoNCE denominator, and DCLW
++    weights negative pairs proportional to their squared Euclidean distance 
++    w_ij = 2 - 2 * (z_i^T z_j). This downweights false negative pairs (same class 
++    images with high similarity) and emphasizes true hard negatives, leading to 
++    better semantic representation alignment in few pretraining epochs.
+     """
+ 
+     def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.1):
+@@ -34,8 +36,11 @@
+         # Concatenate features from both views: [2 * batch_size, dim]
+         z = torch.cat([z1, z2], dim=0)
+ 
+-        # Compute cosine similarity matrix scaled by temperature: [2N, 2N]
+-        sim = torch.matmul(z, z.T) / self.temperature
++        # Raw cosine similarity matrix in [-1, 1]: [2N, 2N]
++        raw_sim = torch.matmul(z, z.T)
++
++        # Cosine similarity matrix scaled by temperature: [2N, 2N]
++        sim = raw_sim / self.temperature
+ 
+         # Target indices for positive pairs
+         pos_idx = torch.cat([
+@@ -51,10 +56,16 @@
+         neg_mask.fill_diagonal_(False)
+         neg_mask[torch.arange(2 * batch_size, device=z.device), pos_idx] = False
+ 
++        # Compute DCLW weights w_ij = 2.0 - 2.0 * raw_sim = ||z_i - z_j||^2
++        w_ij = torch.clamp(2.0 - 2.0 * raw_sim, min=1e-7)
++
++        # Add log(w_ij) in log-space for numerical stability: log(w_ij * exp(sim)) = sim + log(w_ij)
++        sim_weighted = sim + torch.log(w_ij)
++
+         # Mask invalid negative positions with a large negative number
+-        sim_neg = sim.masked_fill(~neg_mask, -1e9)
++        sim_neg = sim_weighted.masked_fill(~neg_mask, -1e9)
+ 
+-        # DCL loss: - pos_sim + log( sum_{neg} exp(sim_neg) )
++        # DCLW loss: - pos_sim + log( sum_{neg} w_ij * exp(sim_neg) )
+         loss = -pos_sim + torch.logsumexp(sim_neg, dim=1)
+ 
+         return loss.mean()

@@ -1,0 +1,1 @@
+{"smoke_ok": true, "n_params": 20620352, "loss": 3.792706251144409, "candidate_config": {"pretrain_epochs": 50, "linear_eval_epochs": 100, "batch_size": 512, "lr": 0.5, "weight_decay": 0.0001, "lambda_param": 0.005, "linear_lr": 0.1, "linear_batch_size": 256}}
