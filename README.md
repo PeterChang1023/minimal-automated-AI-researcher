@@ -133,9 +133,18 @@ python -m air.loop --run-name flash35-clean --backend gemini --model gemini-3.5-
 python scripts/visualize.py runs/flash35-clean && python scripts/plot_loss_curves.py runs/flash35-clean
 ```
 
-Visualization: [`runs/flash35-clean/viz/progress.png`](runs/flash35-clean/viz/progress.png),
-[`trace.html`](runs/flash35-clean/viz/trace.html), per-epoch loss
-[`loss_curves.png`](runs/flash35-clean/viz/loss_curves.png). Full console log: [`runs/flash35-clean.log`](runs/flash35-clean.log).
+**Progress** (validation accuracy per iteration; line = best code kept so far):
+
+![flash35-clean progress](runs/flash35-clean/viz/progress.png)
+
+**Per-epoch pretraining loss** (one panel per code version, each with its own y-scale):
+
+![flash35-clean loss curves](runs/flash35-clean/viz/loss_curves.png)
+
+**Step-by-step trace** (each iteration's hypothesis, checks, result and decision; LLM vs program stages colour-coded):
+[open in browser](https://htmlpreview.github.io/?https://github.com/PeterChang1023/minimal-automated-AI-researcher/blob/main/runs/flash35-clean/viz/trace.html) · [source](runs/flash35-clean/viz/trace.html)
+(GitHub shows `.html` files as source code, so use the first link or open the file locally).
+Full console log: [`runs/flash35-clean.log`](runs/flash35-clean.log).
 
 | iter | what the LLM changed (vs current best) | val acc | Δ vs best | decision |
 |---|---|---|---|---|
@@ -163,8 +172,9 @@ non-determinism of the same size as the seed spread (26.55–28.67 %).
 
 ### 4b. First run `runs/main` (hinton, 2026-11-13)
 
-Visualization: [`runs/main/viz/progress.png`](runs/main/viz/progress.png) and
-[`runs/main/viz/trace.html`](runs/main/viz/trace.html) (open locally; LLM decisions vs program checks are colour-coded).
+![runs/main progress](runs/main/viz/progress.png)
+
+Trace: [open in browser](https://htmlpreview.github.io/?https://github.com/PeterChang1023/minimal-automated-AI-researcher/blob/main/runs/main/viz/trace.html) · [source](runs/main/viz/trace.html).
 
 | run | iter | what | LLM | pretrain epochs | val acc | wall time | decision |
 |---|---|---|---|---|---|---|---|
