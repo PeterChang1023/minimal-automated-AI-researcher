@@ -16,6 +16,14 @@ the accept/reject decision, the feedback text) is deterministic program code.
 | LLM | Gemini via Google AI Studio REST (`GEMINI_API_KEY`), default model `gemini-3.1-pro-preview` (`--model`/`GEMINI_MODEL`). Pluggable: `--backend gemini-cli` (Google `gemini` CLI logged in with a Google account, uses the subscription quota), `claude-cli`, `file`, `mock` |
 | Libraries | PyTorch 2.1.0 (cu121), torchvision 0.16.0, NumPy 1.26.4, Pillow, matplotlib. Python stdlib only for the loop / LLM client (no SDK, no RAG) |
 
+## Result at a glance (`runs/flash35-clean`, 5 Gemini iterations)
+
+![flash35-clean progress: baseline 26.75% -> best 54.19% at iter 4](runs/flash35-clean/viz/progress.png)
+
+Baseline 26.75 % → best **54.19 %** (iter 4) after 5 real `gemini-3.5-flash` proposals (3 accepted,
+2 rejected, 0 failures), 50 pretrain epochs, validation split. Details in [§4a](#4a-clean-run-runsflash35-clean-hinton-2026-11-14--main-result).
+The first run (`runs/main`, whose iterations 1–4 were LLM-setup failures) is kept unchanged in [§4b](#4b-first-run-runsmain-hinton-2026-11-13).
+
 ## 1. Setup on hinton
 
 ```bash
@@ -63,7 +71,8 @@ python scripts/seed_check.py runs/main --seeds 1 2   # ~4 x 7 min -> runs/main/s
 python scripts/plot_loss_curves.py runs/main         # per-epoch pretraining loss -> runs/main/viz/loss_curves.png
 
 # Part 3 – visualization from the real logs
-python scripts/visualize.py runs/main        # -> runs/main/viz/progress.png, trace.html
+python scripts/visualize.py runs/flash35-clean   # -> runs/flash35-clean/viz/progress.png, trace.html
+python scripts/plot_loss_curves.py runs/flash35-clean
 
 # when finished (lab rule): remove data + checkpoints, keep logs
 bash scripts/cleanup_cache.sh
@@ -172,7 +181,9 @@ non-determinism of the same size as the seed spread (26.55–28.67 %).
 
 ### 4b. First run `runs/main` (hinton, 2026-11-13)
 
-![runs/main progress](runs/main/viz/progress.png)
+First attempt, kept as the honest failure log (iterations 1–4 = LLM setup errors, not research results):
+
+![runs/main progress (first attempt; iters 1-4 are LLM setup errors)](runs/main/viz/progress.png)
 
 Trace: [open in browser](https://htmlpreview.github.io/?https://github.com/PeterChang1023/minimal-automated-AI-researcher/blob/main/runs/main/viz/trace.html) · [source](runs/main/viz/trace.html).
 
