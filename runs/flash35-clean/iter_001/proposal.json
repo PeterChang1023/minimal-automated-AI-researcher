@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Switching from Barlow Twins redundancy reduction loss to SimCLR (NT-Xent) loss and removing excessive Gaussian blur for 32x32 images will significantly accelerate representation learning within 50 pretraining epochs.",
+  "rationale": "Barlow Twins fits a 2048x2048 cross-correlation matrix to identity, which requires many epochs (800+) to converge. In a short 50-epoch budget (~4700 steps at batch 512), InfoNCE / SimCLR directly pulls positive pairs together and pushes batch negatives apart in normalized hyperspace, yielding much stronger gradients early in pretraining. Additionally, Gaussian blur on low-resolution 32x32 CIFAR images removes essential high-frequency spatial features, so disabling Gaussian blur preserves informative features.",
+  "expected_effect": "Substantially higher validation linear-probe accuracy compared to baseline (0.2675).",
+  "change_summary": "Replaced Barlow Twins loss with NT-Xent (SimCLR) loss in `BarlowTwinsLoss`, adjusted augmentation to omit Gaussian blur for 32x32 CIFAR images and use standard crop scale (0.08, 1.0), and tuned learning rate to 0.5 for SimCLR with SGD."
+}

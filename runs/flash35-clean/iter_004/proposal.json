@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Replacing the 3-layer projection head with a standard 2-layer projection head (Linear-BN-ReLU-Linear) will accelerate representation learning and improve validation accuracy under a 50-epoch budget by reducing head over-parameterization and facilitating faster gradient flow into the backbone.",
+  "rationale": "In iter 1 and iter 2, switching to contrastive/DCL losses yielded huge accuracy gains (+27.21 pts over baseline), but retained the 3-layer projection head from the original Barlow Twins architecture. For contrastive learning (SimCLR/DCL) under short pretraining budgets (50 epochs), a 3-layer MLP adds ~4.2 million unnecessary parameters in the discarded head, slowing down convergence. Standard contrastive learning literature (Chen et al., 2020) shows that a 2-layer projection head is optimal for representation quality.",
+  "expected_effect": "Faster convergence during 50 pretraining epochs and higher linear-probe accuracy on CIFAR-100 validation set.",
+  "change_summary": "In `ProjectionHead`, simplified the architecture from 3 linear layers to 2 linear layers (Linear(512, 2048) -> BatchNorm1d -> ReLU -> Linear(2048, 2048)), keeping all DCL loss parameters and augmentations identical to iter 2."
+}

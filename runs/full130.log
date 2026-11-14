@@ -1,0 +1,2 @@
+[2026-11-13T22:55:35+08:00] iter 0: running unmodified baseline
+[2026-11-13T23:13:25+08:00] iter 0 -> ok val_acc=0.47037404775619507

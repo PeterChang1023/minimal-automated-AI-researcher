@@ -1,0 +1,15 @@
+# Mirrors FML-bench's `sololearn` env (setup.py @ d336651) + matplotlib for the visualization.
+# torch 2.1.0+cu121 runs on H100 (sm_90) with newer drivers (CUDA 13.x driver is backward compatible).
+name: air
+channels: [conda-forge]
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu121
+      - torch==2.1.0+cu121
+      - torchvision==0.16.0+cu121
+      - numpy==1.26.4
+      - pillow==12.1.1
+      - matplotlib==3.8.4
+      - setuptools<81

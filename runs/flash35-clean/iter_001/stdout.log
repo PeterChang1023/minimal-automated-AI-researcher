@@ -1,0 +1,31 @@
+[harness] candidate config: {'pretrain_epochs': 50, 'linear_eval_epochs': 100, 'batch_size': 512, 'lr': 0.5, 'weight_decay': 0.0001, 'lambda_param': 0.005, 'linear_lr': 0.1, 'linear_batch_size': 256}
+[harness] effective config (after budget overrides): {'pretrain_epochs': 50, 'linear_eval_epochs': 100, 'batch_size': 512, 'lr': 0.5, 'weight_decay': 0.0001, 'lambda_param': 0.005, 'linear_lr': 0.1, 'linear_batch_size': 256}
+Files already downloaded and verified
+Files already downloaded and verified
+Train: 50000, Val portion: 3000, Hidden test: 7000, Visible pool: 53000
+Agent train: 49979, Agent val: 3021 (val_ratio=0.057, val_seed=42)
+
+=== Pretraining Barlow Twins for 50 epochs ===
+[harness] epoch 1: mean pretrain loss 5.7278
+Pretrain Epoch 1/50: Loss=5.7278
+[harness] epoch 5: mean pretrain loss 3.6245
+[harness] epoch 10: mean pretrain loss 2.6536
+[harness] epoch 15: mean pretrain loss 2.2588
+[harness] epoch 20: mean pretrain loss 2.0342
+Pretrain Epoch 20/50: Loss=2.0342
+[harness] epoch 25: mean pretrain loss 1.8900
+[harness] epoch 30: mean pretrain loss 1.7490
+[harness] epoch 35: mean pretrain loss 1.6534
+[harness] epoch 40: mean pretrain loss 1.5255
+Pretrain Epoch 40/50: Loss=1.5255
+[harness] epoch 45: mean pretrain loss 1.4718
+[harness] epoch 50: mean pretrain loss 1.4659
+Saved pretrained backbone to model_checkpoint/backbone.pt
+
+=== Linear evaluation (100 epochs, seed=100) ===
+
+=== VAL Results ===
+  Linear probe accuracy: 0.530950
+
+Saved results to results_tmp/val_info.json
+[harness] official evaluation wall time: 360.4s

@@ -1,0 +1,143 @@
+{
+  "created": "2026-11-13T11:48:24+00:00",
+  "argv": [
+    "/home/user/minimal-automated-AI-researcher/air/loop.py",
+    "--run-name",
+    "pipeline-test",
+    "--backend",
+    "mock",
+    "--fake-executor",
+    "--max-iters",
+    "3",
+    "--propose-next",
+    "--data-root",
+    "/tmp/claude-0/air-data",
+    "--work-root",
+    "/tmp/claude-0/air-work"
+  ],
+  "fingerprint": {
+    "budget": {
+      "pretrain_epochs": 50,
+      "linear_eval_epochs": 100,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    },
+    "eval_sha256": "6a4f78b42b40da3b9c39b6b5e4db587372623dba7b20f1b95ee64175a2a1d682",
+    "split_sha256": "e5f83281234a2ffa594497fa6e42c38bc3cb7a326b846233c2774550128a7970",
+    "max_batch_size": 512
+  },
+  "budget": {
+    "pretrain_epochs": 50,
+    "linear_eval_epochs": 100,
+    "linear_lr": 0.1,
+    "linear_batch_size": 256,
+    "max_bs": 512,
+    "timeout_min": 40.0,
+    "config_overrides": {
+      "pretrain_epochs": 50,
+      "linear_eval_epochs": 100,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    }
+  },
+  "seeds": {
+    "official_set_seed": 42,
+    "linear_probe_seed_val": 100,
+    "split": "val_ratio=0.057,val_seed=42"
+  },
+  "llm": {
+    "backend": "mock",
+    "model": ""
+  },
+  "hardware": {
+    "hostname": "vm",
+    "python": "3.13.18",
+    "platform": "Linux-6.18.44-fc-v445-x86_64-with-glibc2.39",
+    "gpu": "",
+    "cpu_count": 4,
+    "repo_commit": "HEAD",
+    "torch": "2.15.0+cu132",
+    "torchvision": "0.29.2+cu132",
+    "cuda_runtime": "13.2",
+    "cudnn": 92600
+  },
+  "fake_executor": true,
+  "selection_split": "val only (hidden test never run by the loop)",
+  "resumes": [
+    {
+      "time": "2026-11-13T11:49:42+00:00",
+      "argv": [
+        "/home/user/minimal-automated-AI-researcher/air/loop.py",
+        "--run-name",
+        "pipeline-test",
+        "--backend",
+        "file",
+        "--response-file",
+        "/tmp/claude-0/resp/shape.txt",
+        "--fake-executor",
+        "--max-iters",
+        "4",
+        "--data-root",
+        "/tmp/claude-0/air-data",
+        "--work-root",
+        "/tmp/claude-0/air-work"
+      ]
+    },
+    {
+      "time": "2026-11-13T11:49:45+00:00",
+      "argv": [
+        "/home/user/minimal-automated-AI-researcher/air/loop.py",
+        "--run-name",
+        "pipeline-test",
+        "--backend",
+        "file",
+        "--response-file",
+        "/tmp/claude-0/resp/forbid.txt",
+        "--fake-executor",
+        "--max-iters",
+        "5",
+        "--data-root",
+        "/tmp/claude-0/air-data",
+        "--work-root",
+        "/tmp/claude-0/air-work"
+      ]
+    },
+    {
+      "time": "2026-11-13T11:49:45+00:00",
+      "argv": [
+        "/home/user/minimal-automated-AI-researcher/air/loop.py",
+        "--run-name",
+        "pipeline-test",
+        "--backend",
+        "file",
+        "--response-file",
+        "/tmp/claude-0/resp/garbage.txt",
+        "--fake-executor",
+        "--max-iters",
+        "6",
+        "--data-root",
+        "/tmp/claude-0/air-data",
+        "--work-root",
+        "/tmp/claude-0/air-work"
+      ]
+    },
+    {
+      "time": "2026-11-13T11:49:45+00:00",
+      "argv": [
+        "/home/user/minimal-automated-AI-researcher/air/loop.py",
+        "--run-name",
+        "pipeline-test",
+        "--backend",
+        "mock",
+        "--fake-executor",
+        "--max-iters",
+        "8",
+        "--propose-next",
+        "--data-root",
+        "/tmp/claude-0/air-data",
+        "--work-root",
+        "/tmp/claude-0/air-work"
+      ]
+    }
+  ]
+}

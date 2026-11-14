@@ -1,0 +1,301 @@
+{
+  "iter": 3,
+  "kind": "candidate",
+  "time": "2026-11-14T01:53:52+08:00",
+  "parent_iter": 2,
+  "parent_val_acc": 0.5395564436912537,
+  "llm": {
+    "backend": "gemini",
+    "model": "gemini-3.5-flash",
+    "seconds": 46.2
+  },
+  "fingerprint": {
+    "budget": {
+      "pretrain_epochs": 50,
+      "linear_eval_epochs": 100,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    },
+    "eval_sha256": "6a4f78b42b40da3b9c39b6b5e4db587372623dba7b20f1b95ee64175a2a1d682",
+    "split_sha256": "e5f83281234a2ffa594497fa6e42c38bc3cb7a326b846233c2774550128a7970",
+    "max_batch_size": 512
+  },
+  "hypothesis": "Lowering the contrastive temperature from 0.1 to 0.07 and setting the minimum RandomResizedCrop scale from 0.08 to 0.20 will improve DCL feature learning on 32x32 CIFAR-100 images by sharpening hard-negative gradients and preventing over-cropping.",
+  "rationale": "In iter 2, DCL loss improved linear evaluation accuracy to 0.5396. However, two hyperparameter settings are suboptimal for low-resolution CIFAR-100 images: (1) ImageNet-default crop scale (0.08, 1.0) crops down to 9x9 pixels, often discarding all semantic content and creating noisy positive pairs; a minimum scale of 0.20 (14x14 pixels) preserves recognizable semantic structures. (2) Standard contrastive literature (SimCLR, MoCo v2, DCL) demonstrates that tau=0.07 provides stronger repulsion for hard negatives and tighter alignment for fine-grained datasets like CIFAR-100 compared to tau=0.1.",
+  "expected_effect": "Stronger hard-negative gradients and semantically consistent positive crops will accelerate representation learning within 50 epochs, improving top-1 linear evaluation accuracy beyond 0.5396.",
+  "change_summary": "In BarlowTwinsLoss, set default temperature from 0.1 to 0.07. In get_augmentation(), adjust RandomResizedCrop scale from (0.08, 1.0) to (0.2, 1.0).",
+  "static_problems": [],
+  "status": "ok",
+  "val_acc": 0.5107580423355103,
+  "seconds": 368.7,
+  "smoke_seconds": 2.0,
+  "losses": [
+    {
+      "epoch": 1,
+      "loss": 5.7236
+    },
+    {
+      "epoch": 20,
+      "loss": -1.5447
+    },
+    {
+      "epoch": 40,
+      "loss": -2.807
+    }
+  ],
+  "loss_curve": [
+    {
+      "epoch": 1,
+      "loss": 5.723632183271585,
+      "elapsed_s": 7.0
+    },
+    {
+      "epoch": 2,
+      "loss": 4.804194499536888,
+      "elapsed_s": 13.5
+    },
+    {
+      "epoch": 3,
+      "loss": 3.9725728772350193,
+      "elapsed_s": 20.1
+    },
+    {
+      "epoch": 4,
+      "loss": 3.277593868294942,
+      "elapsed_s": 26.7
+    },
+    {
+      "epoch": 5,
+      "loss": 2.701755798969072,
+      "elapsed_s": 33.4
+    },
+    {
+      "epoch": 6,
+      "loss": 2.152391099438225,
+      "elapsed_s": 40.0
+    },
+    {
+      "epoch": 7,
+      "loss": 1.5318005748630799,
+      "elapsed_s": 46.7
+    },
+    {
+      "epoch": 8,
+      "loss": 0.9576214662532216,
+      "elapsed_s": 53.4
+    },
+    {
+      "epoch": 9,
+      "loss": 0.4824207738502738,
+      "elapsed_s": 60.0
+    },
+    {
+      "epoch": 10,
+      "loss": 0.097728660426189,
+      "elapsed_s": 66.7
+    },
+    {
+      "epoch": 11,
+      "loss": -0.18697020933800138,
+      "elapsed_s": 73.3
+    },
+    {
+      "epoch": 12,
+      "loss": -0.3823613825532579,
+      "elapsed_s": 80.0
+    },
+    {
+      "epoch": 13,
+      "loss": -0.6243667995806822,
+      "elapsed_s": 86.7
+    },
+    {
+      "epoch": 14,
+      "loss": -0.7901722229633135,
+      "elapsed_s": 93.4
+    },
+    {
+      "epoch": 15,
+      "loss": -0.9355758195070877,
+      "elapsed_s": 100.0
+    },
+    {
+      "epoch": 16,
+      "loss": -1.1240393255174774,
+      "elapsed_s": 106.7
+    },
+    {
+      "epoch": 17,
+      "loss": -1.2458186985291158,
+      "elapsed_s": 113.4
+    },
+    {
+      "epoch": 18,
+      "loss": -1.3456793716273356,
+      "elapsed_s": 120.1
+    },
+    {
+      "epoch": 19,
+      "loss": -1.4376159353354543,
+      "elapsed_s": 126.8
+    },
+    {
+      "epoch": 20,
+      "loss": -1.5447356233891754,
+      "elapsed_s": 133.5
+    },
+    {
+      "epoch": 21,
+      "loss": -1.6382042009805895,
+      "elapsed_s": 140.1
+    },
+    {
+      "epoch": 22,
+      "loss": -1.7225009878886115,
+      "elapsed_s": 146.8
+    },
+    {
+      "epoch": 23,
+      "loss": -1.8117790615435727,
+      "elapsed_s": 154.4
+    },
+    {
+      "epoch": 24,
+      "loss": -1.8817766327218912,
+      "elapsed_s": 161.1
+    },
+    {
+      "epoch": 25,
+      "loss": -1.9340744805090206,
+      "elapsed_s": 167.8
+    },
+    {
+      "epoch": 26,
+      "loss": -2.025629259876369,
+      "elapsed_s": 174.6
+    },
+    {
+      "epoch": 27,
+      "loss": -2.091510261456991,
+      "elapsed_s": 182.2
+    },
+    {
+      "epoch": 28,
+      "loss": -2.1501203713957797,
+      "elapsed_s": 189.0
+    },
+    {
+      "epoch": 29,
+      "loss": -2.1935914029780124,
+      "elapsed_s": 195.7
+    },
+    {
+      "epoch": 30,
+      "loss": -2.2888746753181377,
+      "elapsed_s": 202.4
+    },
+    {
+      "epoch": 31,
+      "loss": -2.332812122462951,
+      "elapsed_s": 209.1
+    },
+    {
+      "epoch": 32,
+      "loss": -2.3928005572446844,
+      "elapsed_s": 215.8
+    },
+    {
+      "epoch": 33,
+      "loss": -2.4626647319990336,
+      "elapsed_s": 222.4
+    },
+    {
+      "epoch": 34,
+      "loss": -2.5066086287351,
+      "elapsed_s": 229.1
+    },
+    {
+      "epoch": 35,
+      "loss": -2.5518575452037693,
+      "elapsed_s": 235.8
+    },
+    {
+      "epoch": 36,
+      "loss": -2.6203871264900127,
+      "elapsed_s": 242.5
+    },
+    {
+      "epoch": 37,
+      "loss": -2.6675956175499356,
+      "elapsed_s": 249.1
+    },
+    {
+      "epoch": 38,
+      "loss": -2.713510414988724,
+      "elapsed_s": 255.8
+    },
+    {
+      "epoch": 39,
+      "loss": -2.7550722102528993,
+      "elapsed_s": 262.5
+    },
+    {
+      "epoch": 40,
+      "loss": -2.8070112405364047,
+      "elapsed_s": 269.2
+    },
+    {
+      "epoch": 41,
+      "loss": -2.837870489690722,
+      "elapsed_s": 275.9
+    },
+    {
+      "epoch": 42,
+      "loss": -2.862748608146746,
+      "elapsed_s": 282.6
+    },
+    {
+      "epoch": 43,
+      "loss": -2.896612422982442,
+      "elapsed_s": 289.3
+    },
+    {
+      "epoch": 44,
+      "loss": -2.9262931273155606,
+      "elapsed_s": 295.9
+    },
+    {
+      "epoch": 45,
+      "loss": -2.9495553872019973,
+      "elapsed_s": 302.6
+    },
+    {
+      "epoch": 46,
+      "loss": -2.9641210811654317,
+      "elapsed_s": 309.3
+    },
+    {
+      "epoch": 47,
+      "loss": -3.0045939966575386,
+      "elapsed_s": 316.0
+    },
+    {
+      "epoch": 48,
+      "loss": -2.9991552608529317,
+      "elapsed_s": 322.7
+    },
+    {
+      "epoch": 49,
+      "loss": -2.999330815580702,
+      "elapsed_s": 329.4
+    },
+    {
+      "epoch": 50,
+      "loss": -2.9952524716092137,
+      "elapsed_s": 336.1
+    }
+  ],
+  "decision": "rejected",
+  "delta_pts": -2.88,
+  "feedback": "REJECTED: val_acc 0.5108 <= best 0.5396 (-2.88 pts). Best code kept."
+}

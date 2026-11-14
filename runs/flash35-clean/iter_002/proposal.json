@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Replacing standard InfoNCE (NT-Xent) loss with Decoupled Contrastive Learning (DCL) loss will accelerate representation learning within the 50-epoch budget by eliminating the positive-pair suppression effect in the loss denominator.",
+  "rationale": "In standard InfoNCE (used in iter 1), as positive similarity increases, the positive pair term exp(s_pos / tau) dominates the loss denominator, causing the gradients of all negative samples to rapidly diminish (positive pair saturation). Decoupled Contrastive Learning (Yeh et al., CVPR 2022) removes the positive term from the denominator, ensuring persistent repelling gradients from negative pairs and significantly improving linear probe performance under short pretraining schedules.",
+  "expected_effect": "Faster feature convergence and improved feature quality within 50 epochs, leading to a higher top-1 linear evaluation accuracy on CIFAR-100 compared to iter 1 (0.5310).",
+  "change_summary": "Replaced NT-Xent (InfoNCE) loss calculation in `BarlowTwinsLoss` with the Decoupled Contrastive Learning (DCL) loss formulation while keeping all other architecture and hyperparameter settings from iter 1 unchanged."
+}

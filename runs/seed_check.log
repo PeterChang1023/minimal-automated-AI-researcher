@@ -1,0 +1,13 @@
+python: can't open file '/home/PeterChang/minimal-automated-AI-researcher/scripts/seed_check.py': [Errno 2] No such file or directory
+running baseline seed 1 ...
+  baseline seed 1: val_acc=0.2655
+running baseline seed 2 ...
+  baseline seed 2: val_acc=0.2863
+running best_iter5 seed 1 ...
+  best_iter5 seed 1: val_acc=0.5207
+running best_iter5 seed 2 ...
+  best_iter5 seed 2: val_acc=0.5151
+
+summary (val acc, %):
+  baseline       n=3 mean=27.95 sd=1.21 values=42:28.67, 1:26.55, 2:28.63
+  best_iter5     n=3 mean=51.66 sd=0.36 values=42:51.41, 1:52.07, 2:51.51

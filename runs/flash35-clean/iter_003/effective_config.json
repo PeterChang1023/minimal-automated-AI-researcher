@@ -1,0 +1,28 @@
+{
+  "candidate_config": {
+    "pretrain_epochs": 50,
+    "linear_eval_epochs": 100,
+    "batch_size": 512,
+    "lr": 0.5,
+    "weight_decay": 0.0001,
+    "lambda_param": 0.005,
+    "linear_lr": 0.1,
+    "linear_batch_size": 256
+  },
+  "overrides": {
+    "pretrain_epochs": 50,
+    "linear_eval_epochs": 100,
+    "linear_lr": 0.1,
+    "linear_batch_size": 256
+  },
+  "effective_config": {
+    "pretrain_epochs": 50,
+    "linear_eval_epochs": 100,
+    "batch_size": 512,
+    "lr": 0.5,
+    "weight_decay": 0.0001,
+    "lambda_param": 0.005,
+    "linear_lr": 0.1,
+    "linear_batch_size": 256
+  }
+}
