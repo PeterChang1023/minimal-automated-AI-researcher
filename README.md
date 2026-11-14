@@ -22,6 +22,8 @@ the accept/reject decision, the feedback text) is deterministic program code.
 
 Baseline 26.75 % → best **54.19 %** (iter 4) after 5 real `gemini-3.5-flash` proposals (3 accepted,
 2 rejected, 0 failures), 50 pretrain epochs, validation split. Details in [§4a](#4a-clean-run-runsflash35-clean-hinton-2026-11-14--main-result).
+At the full upstream budget (130 pretrain epochs) the same iter-4 code reaches **59.45 %** vs **47.04 %** for the
+unmodified baseline (single seed each; see [§4a](#4a-clean-run-runsflash35-clean-hinton-2026-11-14--main-result)).
 The first run (`runs/main`, whose iterations 1–4 were LLM-setup failures) is kept unchanged in [§4b](#4b-first-run-runsmain-hinton-2026-11-13).
 
 ## 1. Setup on hinton
@@ -170,6 +172,21 @@ Best: iter 4, 54.19 % on the val split, vs 47.04 % for the 130-epoch baseline in
 Reviewed by the author: the diffs change only loss, projection head, augmentation and the
 pretraining lr; backbone, 512-d features and the linear-probe protocol are untouched
 (`effective_config.json`).
+
+**Full-budget check (outside the loop).** The iter-4 best code (SHA-256 `04caca13…`, identical to
+`runs/flash35-clean/best/algorithm.py`) was re-run with the upstream 130-epoch pretraining budget, everything
+else unchanged (official evaluation, val split, seed 42, linear probe 100 ep / lr 0.1 / bs 256):
+
+| code | pretrain epochs | val acc | wall time | logs |
+|---|---|---|---|---|
+| Barlow Twins baseline (unmodified) | 130 | 47.04 % | 1,068 s | [`runs/full130/`](runs/full130/) |
+| flash35-clean iter 4 (DCL loss, 2-layer head, no blur) | 130 | **59.45 %** (+12.41 pts) | 892 s | [`runs/flash35-clean_best_full130/`](runs/flash35-clean_best_full130/) |
+
+So the change selected under the shortened budget keeps its advantage at the full budget (and beats the
+upstream-reported 47.77 %). One seed per row; the gap is ~10× the seed-to-seed sd measured in 4b, but it is
+still a single comparison on the validation split, not a test-set claim. Per-epoch loss is in
+`loss_curve.json` (5.87 → −0.07; DCL loss can go below zero). Produced by `scripts/run_full_budget.py`
+(PR #4): `python scripts/run_full_budget.py runs/flash35-clean --pretrain-epochs 130`.
 
 **How to read it.** Iter 1 is a large, robust gain (≈ 20× the seed noise measured in 4b) but it changed
 four things at once, so it is not attributable to one of them. Iters 2 and 4 were accepted by the

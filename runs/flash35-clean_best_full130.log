@@ -1,0 +1,2 @@
+running runs/flash35-clean/best/algorithm.py with pretrain_epochs=130 -> /home/PeterChang/minimal-automated-AI-researcher/runs/flash35-clean_best_full130
+val_acc=0.5945  (892s)  -> /home/PeterChang/minimal-automated-AI-researcher/runs/flash35-clean_best_full130/result.json
