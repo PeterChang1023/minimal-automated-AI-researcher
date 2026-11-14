@@ -70,6 +70,9 @@ python -m air.loop --run-name main --max-iters 5 --propose-next
 python scripts/seed_check.py runs/main --seeds 1 2   # ~4 x 7 min -> runs/main/seed_check/summary.json
 python scripts/plot_loss_curves.py runs/main         # per-epoch pretraining loss -> runs/main/viz/loss_curves.png
 
+# Does the 50-epoch winner also win at the full 130-epoch budget? (outside the loop; ~17 min)
+python scripts/run_full_budget.py runs/flash35-clean --pretrain-epochs 130   # -> runs/flash35-clean_best_full130/
+
 # Part 3 – visualization from the real logs
 python scripts/visualize.py runs/flash35-clean   # -> runs/flash35-clean/viz/progress.png, trace.html
 python scripts/plot_loss_curves.py runs/flash35-clean
