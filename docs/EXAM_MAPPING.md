@@ -10,7 +10,7 @@ Legend: ✅ done in repo · 🖥 goes on a slide · ⏳ still to do
 | Explain Barlow Twins | 🖥 | Slide. Source: [`fmlbench_task/algorithm.py`](../fmlbench_task/algorithm.py) (`BarlowTwinsLoss`: cross-correlation of two views → identity; on-diagonal → 1, off-diagonal × λ=5e-3 → 0) |
 | Explain linear evaluation | 🖥 | Slide. Source: `linear_eval()` in [`fmlbench_task/train_eval_baseline.py`](../fmlbench_task/train_eval_baseline.py): freeze backbone, extract 512-d features, train one linear layer 100 epochs, top-1 on val |
 | One possible modification | 🖥 | Slide. Use the one the loop actually found: InfoNCE/SimCLR loss (iter 5); alternatives VICReg, lower λ, shorter-schedule lr |
-| Run baseline / shortened experiment | ✅ | `runs/main/iter_000/` (50 epochs) and `full130` (130 epochs) |
+| Run baseline / shortened experiment | ✅ | `runs/main/iter_000/`, `runs/flash35-clean/iter_000/` (50 epochs) and `runs/full130/iter_000/` (130 epochs) |
 | Validation accuracy | ✅ | 28.67 % (50 ep) · 47.04 % (130 ep) vs reported 47.77 % — README §4 |
 | Commands | ✅ | README §1–2 (`--baseline-only`, `--pretrain-epochs 130`) |
 | Hardware | ✅ | README §4, `runs/main/run_config.json` (H100 NVL, EPYC 9124, torch 2.1.0+cu121) |
@@ -60,6 +60,6 @@ Legend: ✅ done in repo · 🖥 goes on a slide · ⏳ still to do
 | README | ✅ | `README.md` |
 | Environment | ✅ | `environment.yml` |
 | Commands | ✅ | README §1–2 |
-| Logs | ✅ | `runs/main/`, `runs/flash35-clean/` + `runs/flash35-clean.log` (full); `full130` only the final line in README |
+| Logs | ✅ | `runs/main/`, `runs/flash35-clean/` + `runs/flash35-clean.log` (full), `runs/full130/` + `runs/full130.log` |
 | Visualization | ✅ | `runs/flash35-clean/viz/`, `runs/main/viz/` |
 | Disclose LLM, libraries, interventions, failures | ✅ | README header table + §5 Disclosure; failures in §4 table |

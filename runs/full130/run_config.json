@@ -1,0 +1,59 @@
+{
+  "created": "2026-11-13T22:55:34+08:00",
+  "argv": [
+    "/home/PeterChang/minimal-automated-AI-researcher/air/loop.py",
+    "--run-name",
+    "full130",
+    "--pretrain-epochs",
+    "130",
+    "--baseline-only"
+  ],
+  "fingerprint": {
+    "budget": {
+      "pretrain_epochs": 130,
+      "linear_eval_epochs": 100,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    },
+    "eval_sha256": "6a4f78b42b40da3b9c39b6b5e4db587372623dba7b20f1b95ee64175a2a1d682",
+    "split_sha256": "e5f83281234a2ffa594497fa6e42c38bc3cb7a326b846233c2774550128a7970",
+    "max_batch_size": 512
+  },
+  "budget": {
+    "pretrain_epochs": 130,
+    "linear_eval_epochs": 100,
+    "linear_lr": 0.1,
+    "linear_batch_size": 256,
+    "max_bs": 512,
+    "timeout_min": 40.0,
+    "config_overrides": {
+      "pretrain_epochs": 130,
+      "linear_eval_epochs": 100,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    }
+  },
+  "seeds": {
+    "official_set_seed": 42,
+    "linear_probe_seed_val": 100,
+    "split": "val_ratio=0.057,val_seed=42"
+  },
+  "llm": {
+    "backend": "gemini",
+    "model": ""
+  },
+  "hardware": {
+    "hostname": "hinton",
+    "python": "3.10.22",
+    "platform": "Linux-5.14.0-611.16.1.el9_7.x86_64-x86_64-with-glibc2.34",
+    "gpu": "NVIDIA H100 NVL, 95830 MiB, 590.48.01",
+    "cpu_count": 32,
+    "repo_commit": "dcfb84722321449d674fdde6b1becfc68665c800",
+    "torch": "2.1.0+cu121",
+    "torchvision": "0.16.0+cu121",
+    "cuda_runtime": "12.1",
+    "cudnn": 8902
+  },
+  "fake_executor": false,
+  "selection_split": "val only (hidden test never run by the loop)"
+}
