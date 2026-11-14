@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Lowering the InfoNCE temperature parameter from 0.15 to 0.10 sharpens the penalty on hard negative pairs, encouraging finer semantic discrimination across CIFAR-100's 100 classes under a 130-epoch compute budget.",
+  "rationale": "In Iter 1, replacing Barlow Twins with InfoNCE (temperature=0.15) boosted accuracy from 0.4727 to 0.5637. In contrastive learning (SimCLR), smaller temperatures (e.g. 0.07-0.10) act as implicit hard negative mining by heavily weighting gradient updates for negative pairs with high similarity. On CIFAR-100 with a batch size of 512 (1024 total views), fine-grained class boundaries benefit from sharper negative repulsion.",
+  "expected_effect": "Improved linear-probe accuracy over the current best (0.5637) due to better feature separation of semantically close negative pairs.",
+  "change_summary": "Set temperature parameter to 0.10 (from 0.15) in BarlowTwinsLoss (InfoNCE)."
+}

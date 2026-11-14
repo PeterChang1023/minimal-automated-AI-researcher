@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Decoupled Contrastive Loss (DCL) removes the positive pair penalty from the denominator of InfoNCE loss, preventing positive pair similarity from suppressing hard negative repulsive gradients and thereby accelerating feature representation learning within a 130-epoch compute budget.",
+  "rationale": "In standard InfoNCE (used in iter 1, reaching val_acc=0.5637), the positive pair similarity appears in both the numerator and denominator. When positive pair similarity becomes high, the gradient magnitude for negative pair separation is automatically diminished. DCL (Yeh et al., CVPR 2022) decouples the positive term from the denominator sum logsumexp. Under short pretraining schedules (130 epochs), this decoupling maintains strong repulsive gradients for hard negative discrimination, leading to faster feature quality convergence.",
+  "expected_effect": "Improve linear evaluation accuracy over iter 1 (0.5637) by improving representation learning efficiency under short epoch budgets.",
+  "change_summary": "Replaced standard InfoNCE loss in BarlowTwinsLoss with Decoupled Contrastive Loss (DCL) with temperature 0.1."
+}

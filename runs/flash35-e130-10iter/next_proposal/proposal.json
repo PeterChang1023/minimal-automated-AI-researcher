@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Further increasing the pretraining learning rate from 0.6 to 0.8 will continue to accelerate representation learning under SGD with cosine decay within the short 130-epoch compute budget, allowing features to traverse representation space faster before the learning rate decays.",
+  "rationale": "In iter 10, increasing the learning rate from 0.4 to 0.6 improved validation accuracy from 0.5763 to 0.5773 (+0.10 pts). For SGD with momentum 0.9 at batch size 512 under a brief 130-epoch schedule, higher initial learning rates allow larger feature update steps during the early warm phase before cosine decay significantly reduces the step size.",
+  "expected_effect": "Linear probe top-1 validation accuracy will increase beyond 0.5773.",
+  "change_summary": "In get_training_config(), set 'lr': 0.8 (increased from 0.6)."
+}

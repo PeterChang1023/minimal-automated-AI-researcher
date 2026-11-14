@@ -1,0 +1,23 @@
+--- iter_001/algorithm.py (best)
++++ iter_003/algorithm.py
+@@ -2,9 +2,8 @@
+ Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.
+ 
+ Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)
+-provides stronger instance-discrimination gradients via negative pair repulsion
+-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence
+-and better representation quality under short training schedules.
++with an optimized temperature scaling parameter (t=0.10) sharpens hard negative repulsion,
++accelerating feature representation learning across CIFAR-100's 100 fine-grained classes.
+ """
+ import torch
+ import torch.nn as nn
+@@ -18,7 +17,7 @@
+     Keeps the required class name and constructor interface for harness compatibility.
+     """
+ 
+-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.15):
++    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10):
+         super().__init__()
+         self.lambda_param = lambda_param
+         self.embedding_dim = embedding_dim

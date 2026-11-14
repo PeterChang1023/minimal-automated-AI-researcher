@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Lowering the minimum crop scale in RandomResizedCrop from 0.2 to 0.08 increases spatial view diversity by pairing small local sub-patches (~9x9 pixels) with global views, forcing the backbone to learn local-to-global scale-invariant representations essential for fine-grained CIFAR-100 classification.",
+  "rationale": "In Iter 1 (current best, val_acc 0.5637), switching to InfoNCE contrastive learning dramatically improved representation quality. However, the augmentation pipeline retained the Barlow Twins default crop scale range of (0.2, 1.0). Standard SimCLR relies heavily on aggressive scale cropping down to 0.08 (Chen et al., 2020) to generate scale-varying positive pairs. For 32x32 images with 100 fine-grained classes, forcing local patch views to match full image views prevents shortcut learning on global spatial layout and encourages invariant part-level representations within the 130-epoch compute budget.",
+  "expected_effect": "Improved linear evaluation accuracy on CIFAR-100 by producing more robust scale-invariant features.",
+  "change_summary": "In get_augmentation(), changed transforms.RandomResizedCrop(32, scale=(0.2, 1.0)) to transforms.RandomResizedCrop(32, scale=(0.08, 1.0))."
+}

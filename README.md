@@ -24,6 +24,8 @@ Baseline 26.75 % → best **54.19 %** (iter 4) after 5 real `gemini-3.5-flash` p
 2 rejected, 0 failures), 50 pretrain epochs, validation split. Details in [§4a](#4a-clean-run-runsflash35-clean-hinton-2026-11-14--main-result).
 At the full upstream budget (130 pretrain epochs) the same iter-4 code reaches **59.45 %** vs **47.04 %** for the
 unmodified baseline (single seed each; see [§4a](#4a-clean-run-runsflash35-clean-hinton-2026-11-14--main-result)).
+A second loop run directly at 130 epochs with 10 iterations reached 57.73 % (baseline 47.27 %), below that 59.45 %;
+see [§4c](#4c-second-loop-run-at-the-full-budget-runsflash35-e130-10iter-hinton-2026-11-14) for why.
 The first run (`runs/main`, whose iterations 1–4 were LLM-setup failures) is kept unchanged in [§4b](#4b-first-run-runsmain-hinton-2026-11-13).
 
 ## 1. Setup on hinton
@@ -252,6 +254,51 @@ the main limitation addressed in Part 4.
 Hardware: hinton, 1× NVIDIA H100 NVL (95,830 MiB, shared; ~12.6 GB used by others), driver 590.48.01;
 AMD EPYC 9124 (32 threads), 377 GB RAM; Python 3.10.22, torch 2.1.0+cu121, torchvision 0.16.0, cuDNN 8.9.2.
 Exact strings in `runs/main/run_config.json`. Budget: 50 pretrain epochs ≈ 7 min per experiment.
+
+### 4c. Second loop run at the full budget `runs/flash35-e130-10iter` (hinton, 2026-11-14)
+
+Same loop and LLM, but **130 pretrain epochs per experiment and 10 iterations** (separate budget
+fingerprint, so not mixed with the 50-epoch runs). ≈ 18 min per experiment, 11 experiments ≈ 3.3 h.
+
+```bash
+python -m air.loop --run-name flash35-e130-10iter --backend gemini --model gemini-3.5-flash \
+    --pretrain-epochs 130 --max-iters 10 --propose-next --timeout-min 60
+```
+
+![flash35-e130-10iter progress](runs/flash35-e130-10iter/viz/progress.png)
+
+| iter | change (vs current best) | val acc | decision |
+|---|---|---|---|
+| 0 | unmodified Barlow Twins baseline | 47.27 % | baseline |
+| 1 | Barlow Twins → InfoNCE (NT-Xent), τ = 0.15 | **56.37 %** | accepted |
+| 2 | InfoNCE → DCL, τ = 0.1 | 55.94 % | rejected |
+| 3 | τ 0.15 → 0.10 | 53.26 % | rejected |
+| 4 | remove Gaussian blur | 55.58 % | rejected |
+| 5 | τ 0.15 → 0.20 | 55.88 % | rejected |
+| 6 | projection head 3 → 2 layers | 56.14 % | rejected |
+| 7 | add Barlow-style off-diagonal decorrelation term to InfoNCE | 6.36 % | rejected (collapse) |
+| 8 | BatchNorm (affine=False) after the projection head | 54.98 % | rejected |
+| 9 | crop scale (0.2, 1) → (0.08, 1) | **57.63 %** | accepted |
+| 10 | lr 0.4 → 0.6 | **57.73 %** | accepted (best) |
+| next | lr 0.6 → 0.8, **not executed** | – | – |
+
+Logs: [`runs/flash35-e130-10iter/`](runs/flash35-e130-10iter/), [`trace.html`](runs/flash35-e130-10iter/viz/trace.html),
+[`loss_curves.png`](runs/flash35-e130-10iter/viz/loss_curves.png), console [`runs/flash35-e130-10iter.log`](runs/flash35-e130-10iter.log).
+No LLM, check or runtime failures. The 130-epoch baseline reproduced at 47.27 % (47.04 % in `runs/full130`, 47.77 % upstream).
+
+**Honest reading.**
+* Iter 1 (+9.10 pts) is a clear gain. Iters 9 (+1.26) and 10 (+0.10) were accepted by the strict
+  single-seed `>` rule, but both are within the seed-to-seed noise (sd ≈ 1.2 pts) and the val-set SE
+  (≈ ±0.9 pts); this run cannot say they are real.
+* This run's best (57.73 %) is **below** the 59.45 % that the 50-epoch run's best code reaches when re-run
+  at 130 epochs (§4a). That code combines DCL, a 2-layer head and no blur — each of which this run tried
+  *one at a time* (iters 2, 4, 6) and rejected by 0.2–0.8 pts, again inside the noise. Greedy one-change
+  hill-climbing with a single-seed accept rule can discard components that only help in combination, or
+  whose effect is smaller than the noise — the Part 4 limitation, seen on real data.
+* Iter 7 shows the safety net working: a loss change that collapsed the representation (6.36 %) ran,
+  was scored and rejected, and the best code was kept.
+* More iterations at a larger budget did not find a better solution here: 10 × 130 epochs (~3.3 h) ended
+  below 5 × 50 epochs (~37 min) + one 130-epoch re-run (~15 min).
 
 ## 5. Disclosure
 

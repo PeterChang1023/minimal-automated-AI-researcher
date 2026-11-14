@@ -1,0 +1,34 @@
+[2026-11-14T21:27:31+08:00] iter 0: running unmodified baseline
+[2026-11-14T21:45:23+08:00] iter 0 -> ok val_acc=0.4726911783218384
+[2026-11-14T21:45:23+08:00] iter 1: proposing (best so far 0.4727 @ iter 0)
+[2026-11-14T21:46:05+08:00] iter 1: executing — Replaced feature decorrelation loss in BarlowTwinsLoss with temperature-scaled InfoNCE (NT-Xent) contrastive loss (tempe
+[2026-11-14T22:03:45+08:00] iter 1 -> ok / accepted: ACCEPTED: val_acc 0.5637 > best 0.4727 (+9.10 pts). Now the best.
+[2026-11-14T22:03:45+08:00] iter 2: proposing (best so far 0.5637 @ iter 1)
+[2026-11-14T22:04:26+08:00] iter 2: executing — Replaced standard InfoNCE loss in BarlowTwinsLoss with Decoupled Contrastive Loss (DCL) with temperature 0.1.
+[2026-11-14T22:22:14+08:00] iter 2 -> ok / rejected: REJECTED: val_acc 0.5594 <= best 0.5637 (-0.43 pts). Best code kept.
+[2026-11-14T22:22:14+08:00] iter 3: proposing (best so far 0.5637 @ iter 1)
+[2026-11-14T22:22:54+08:00] iter 3: executing — Set temperature parameter to 0.10 (from 0.15) in BarlowTwinsLoss (InfoNCE).
+[2026-11-14T22:40:43+08:00] iter 3 -> ok / rejected: REJECTED: val_acc 0.5326 <= best 0.5637 (-3.11 pts). Best code kept.
+[2026-11-14T22:40:43+08:00] iter 4: proposing (best so far 0.5637 @ iter 1)
+[2026-11-14T22:41:15+08:00] iter 4: executing — Removed RandomApply(GaussianBlur) from the augmentation pipeline in get_augmentation().
+[2026-11-14T22:56:01+08:00] iter 4 -> ok / rejected: REJECTED: val_acc 0.5558 <= best 0.5637 (-0.79 pts). Best code kept.
+[2026-11-14T22:56:01+08:00] iter 5: proposing (best so far 0.5637 @ iter 1)
+[2026-11-14T22:56:38+08:00] iter 5: executing — Set temperature=0.20 in BarlowTwinsLoss (InfoNCE).
+[2026-11-14T23:14:14+08:00] iter 5 -> ok / rejected: REJECTED: val_acc 0.5588 <= best 0.5637 (-0.50 pts). Best code kept.
+[2026-11-14T23:14:14+08:00] iter 6: proposing (best so far 0.5637 @ iter 1)
+[2026-11-14T23:15:03+08:00] iter 6: executing — Simplified ProjectionHead from a 3-layer MLP (Linear-BN-ReLU-Linear-BN-ReLU-Linear) to a standard 2-layer MLP (Linear-BN
+[2026-11-14T23:32:47+08:00] iter 6 -> ok / rejected: REJECTED: val_acc 0.5614 <= best 0.5637 (-0.23 pts). Best code kept.
+[2026-11-14T23:32:47+08:00] iter 7: proposing (best so far 0.5637 @ iter 1)
+[2026-11-14T23:33:40+08:00] iter 7: executing — Added an off-diagonal cross-correlation decorrelation loss term (weighted by lambda_param) to the InfoNCE loss inside Ba
+[2026-11-14T23:51:30+08:00] iter 7 -> ok / rejected: REJECTED: val_acc 0.0636 <= best 0.5637 (-50.02 pts). Best code kept.
+[2026-11-14T23:51:30+08:00] iter 8: proposing (best so far 0.5637 @ iter 1)
+[2026-11-14T23:52:22+08:00] iter 8: executing — Added nn.BatchNorm1d(output_dim, affine=False) as the final layer in ProjectionHead.
+[2026-11-15T00:10:01+08:00] iter 8 -> ok / rejected: REJECTED: val_acc 0.5498 <= best 0.5637 (-1.39 pts). Best code kept.
+[2026-11-15T00:10:01+08:00] iter 9: proposing (best so far 0.5637 @ iter 1)
+[2026-11-15T00:10:30+08:00] iter 9: executing — In get_augmentation(), changed transforms.RandomResizedCrop(32, scale=(0.2, 1.0)) to transforms.RandomResizedCrop(32, sc
+[2026-11-15T00:28:12+08:00] iter 9 -> ok / accepted: ACCEPTED: val_acc 0.5763 > best 0.5637 (+1.26 pts). Now the best.
+[2026-11-15T00:28:12+08:00] iter 10: proposing (best so far 0.5763 @ iter 9)
+[2026-11-15T00:30:28+08:00] iter 10: executing — In get_training_config(), set 'lr': 0.6 (increased from 0.4).
+[2026-11-15T00:48:04+08:00] iter 10 -> ok / accepted: ACCEPTED: val_acc 0.5773 > best 0.5763 (+0.10 pts). Now the best.
+[2026-11-15T00:49:34+08:00] next proposal written to /home/PeterChang/minimal-automated-AI-researcher/runs/flash35-e130-10iter/next_proposal: Further increasing the pretraining learning rate from 0.6 to 0.8 will continue to accelerate representation learning under SGD with cosine decay within the short 130-epoch compute budget, allowing features to traverse representation space faster before the learning rate decays.
+[harness] done. best val_acc=0.5773 (iter 10); baseline=0.4726911783218384

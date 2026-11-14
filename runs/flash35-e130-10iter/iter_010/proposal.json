@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Increasing the pretraining learning rate from 0.4 to 0.6 will accelerate feature convergence under SGD with cosine annealing within the short 130-epoch budget, yielding a better linear-probe representation.",
+  "rationale": "In Iter 1, we switched from Barlow Twins to InfoNCE contrastive loss but kept the default learning rate (lr=0.4) designed for Barlow Twins. Contrastive InfoNCE loss has different gradient dynamics and scale. Under a severe compute constraint of 130 pretraining epochs, the cosine decay schedule lowers the learning rate rapidly. Increasing initial lr to 0.6 allows SGD with 0.9 momentum to take larger gradient steps in early-to-mid epochs, improving representation quality before learning rate decays.",
+  "expected_effect": "Faster feature representation learning during the 130 epochs, leading to strictly higher validation linear-probe accuracy over the current best (0.5763).",
+  "change_summary": "In get_training_config(), set 'lr': 0.6 (increased from 0.4)."
+}

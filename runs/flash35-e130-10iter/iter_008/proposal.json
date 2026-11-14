@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Adding a final BatchNorm1d layer (with affine=False) to the 3-layer projection head standardizes feature variances across all 2048 projection dimensions before L2 normalization, preventing high-variance dimensions from dominating the cosine similarity matrix and improving gradient distribution to the backbone during 130-epoch pretraining.",
+  "rationale": "In iter 1, switching to InfoNCE loss achieved the best val accuracy of 0.5637 using L2-normalized projections. However, the 3-layer projection head in iter 1 lacked final batch normalization before L2 normalization. Without final BN, individual output dimensions can have unequal variances, causing L2 normalization to project vectors into an anisotropic subspace of the hypersphere and reducing effective representation capacity. Adding BatchNorm1d(output_dim, affine=False) ensures isotropic variance across all 2048 dimensions, maximizing representation entropy and accelerating feature learning.",
+  "expected_effect": "Improved linear evaluation accuracy by encouraging uniform usage of all projection dimensions and providing balanced representation learning gradients.",
+  "change_summary": "Added nn.BatchNorm1d(output_dim, affine=False) as the final layer in ProjectionHead."
+}

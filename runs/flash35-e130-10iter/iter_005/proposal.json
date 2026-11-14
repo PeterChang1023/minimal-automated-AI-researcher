@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Increasing the InfoNCE temperature parameter from 0.15 to 0.20 will soften the negative contrastive penalty, reducing gradient noise and variance caused by the relatively small pool of negatives (1023 negatives per sample at batch size 512) and enabling smoother representation alignment under a short 130-epoch pretraining schedule.",
+  "rationale": "Iter 3 showed that sharpening the temperature from 0.15 to 0.10 significantly degraded performance (0.5326 vs 0.5637). This indicates that over-concentrating gradients on hard negatives is detrimental when batch size (512) and pretraining duration (130 epochs) are limited. Testing temperature 0.20 directly probes the opposite direction of the temperature hyperspace.",
+  "expected_effect": "Smoother InfoNCE gradient updates that prevent early feature collapse and yield better linear probe accuracy on CIFAR-100 (>0.5637).",
+  "change_summary": "Set temperature=0.20 in BarlowTwinsLoss (InfoNCE)."
+}

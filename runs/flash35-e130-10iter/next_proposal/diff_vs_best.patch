@@ -1,0 +1,11 @@
+--- iter_010/algorithm.py (best)
++++ next_proposal/algorithm.py
+@@ -104,7 +104,7 @@
+         'pretrain_epochs': 130,
+         'linear_eval_epochs': 100,
+         'batch_size': 512,
+-        'lr': 0.6,
++        'lr': 0.8,
+         'weight_decay': 1e-4,
+         'lambda_param': 5e-3,
+         'linear_lr': 0.1,

@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Replacing the Barlow Twins cross-correlation loss with InfoNCE (SimCLR) contrastive loss will significantly accelerate feature representation learning under the compute-constrained 130-epoch regime on CIFAR-100.",
+  "rationale": "Barlow Twins loss focuses on decorrelating 2048 feature dimensions, which requires many epochs (often 500-1000+) to converge effectively. Under a tight 130-epoch budget, decorrelation is incomplete. In contrast, InfoNCE loss uses instance contrastiveness against 2B-2 negatives per batch sample, delivering strong repulsive gradients from early pretraining epochs and converging much faster to discriminative features.",
+  "expected_effect": "A noticeable increase in top-1 validation linear probe accuracy above the 0.4727 baseline.",
+  "change_summary": "Replaced feature decorrelation loss in BarlowTwinsLoss with temperature-scaled InfoNCE (NT-Xent) contrastive loss (temperature=0.15)."
+}

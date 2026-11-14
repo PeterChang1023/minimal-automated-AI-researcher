@@ -1,0 +1,75 @@
+--- iter_001/algorithm.py (best)
++++ iter_007/algorithm.py
+@@ -1,10 +1,11 @@
+ """
+-Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.
++Self-supervised learning algorithm: InfoNCE + Feature Decorrelation Regularization on CIFAR-100.
+ 
+-Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)
+-provides stronger instance-discrimination gradients via negative pair repulsion
+-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence
+-and better representation quality under short training schedules.
++Under severe compute constraints (130 pretrain epochs), InfoNCE contrastive learning
++provides strong instance discrimination, but risks dimensional collapse where projection
++features become mutually redundant. Adding a Barlow Twins-style off-diagonal cross-correlation
++decorrelation penalty forces embedding dimensions to remain orthogonal, maximizing feature
++capacity and accelerating representation learning.
+ """
+ import torch
+ import torch.nn as nn
+@@ -13,7 +14,7 @@
+ 
+ 
+ class BarlowTwinsLoss(nn.Module):
+-    """InfoNCE (NT-Xent) loss replacing cross-correlation loss for fast SSL convergence.
++    """InfoNCE contrastive loss combined with off-diagonal feature decorrelation regularization.
+ 
+     Keeps the required class name and constructor interface for harness compatibility.
+     """
+@@ -25,23 +26,17 @@
+         self.temperature = temperature
+ 
+     def forward(self, z1, z2):
+-        """Compute InfoNCE contrastive loss over paired augmented views z1 and z2."""
++        """Compute combined InfoNCE + feature decorrelation loss over paired augmented views z1 and z2."""
+         batch_size = z1.shape[0]
+ 
+-        # L2-normalize projection vectors
+-        z1 = nn.functional.normalize(z1, dim=1)
+-        z2 = nn.functional.normalize(z2, dim=1)
++        # 1. InfoNCE (NT-Xent) Loss with L2-normalized embeddings
++        z1_norm = nn.functional.normalize(z1, dim=1)
++        z2_norm = nn.functional.normalize(z2, dim=1)
+ 
+-        # Concatenate embeddings: [2B, D]
+-        out = torch.cat([z1, z2], dim=0)
+-
+-        # Cosine similarity matrix scaled by temperature: [2B, 2B]
++        out = torch.cat([z1_norm, z2_norm], dim=0)
+         similarity_matrix = torch.mm(out, out.t()) / self.temperature
+-
+-        # Mask out self-similarity on the diagonal
+         similarity_matrix.fill_diagonal_(-1e9)
+ 
+-        # Targets: z1_i matches z2_i (index i + B), z2_i matches z1_i (index i)
+         targets = torch.cat(
+             [
+                 torch.arange(batch_size, 2 * batch_size, device=z1.device),
+@@ -49,8 +44,16 @@
+             ],
+             dim=0,
+         )
++        loss_infonce = nn.functional.cross_entropy(similarity_matrix, targets)
+ 
+-        return nn.functional.cross_entropy(similarity_matrix, targets)
++        # 2. Off-diagonal Cross-Correlation Decorrelation Regularization
++        z1_bn = (z1 - z1.mean(dim=0)) / (z1.std(dim=0) + 1e-5)
++        z2_bn = (z2 - z2.mean(dim=0)) / (z2.std(dim=0) + 1e-5)
++
++        c = torch.mm(z1_bn.T, z2_bn) / batch_size
++        off_diag_loss = c.pow(2).sum() - torch.diagonal(c).pow(2).sum()
++
++        return loss_infonce + self.lambda_param * off_diag_loss
+ 
+ 
+ class ProjectionHead(nn.Module):

@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Combining InfoNCE contrastive loss with an off-diagonal feature decorrelation penalty (from Barlow Twins / VICReg) prevents dimensional collapse in the projection space, forcing features to utilize all representation dimensions independently and leading to richer linear evaluation features under short pretraining schedules.",
+  "rationale": "Iter 1 established that InfoNCE contrastive learning dramatically outperforms Barlow Twins alone (0.5637 vs 0.4727). However, pure contrastive learning often suffers from dimensional collapse where feature dimensions become highly correlated. By adding an off-diagonal cross-correlation regularizer (weighted by lambda_param=5e-3) to the InfoNCE loss, we combine instance discrimination (sample repulsion) with feature decorrelation (dimensionality expansion) without adding extra parameters or changing the harness interface.",
+  "expected_effect": "Improved feature diversity across all 512 backbone dimensions, accelerating representation learning and raising top-1 validation accuracy beyond 0.5637.",
+  "change_summary": "Added an off-diagonal cross-correlation decorrelation loss term (weighted by lambda_param) to the InfoNCE loss inside BarlowTwinsLoss.forward()."
+}

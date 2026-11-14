@@ -1,0 +1,32 @@
+--- iter_001/algorithm.py (best)
++++ iter_004/algorithm.py
+@@ -2,9 +2,9 @@
+ Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.
+ 
+ Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)
+-provides stronger instance-discrimination gradients via negative pair repulsion
+-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence
+-and better representation quality under short training schedules.
++provides stronger instance-discrimination gradients via negative pair repulsion.
++For 32x32 low-resolution CIFAR-100 images, omitting Gaussian blur preserves critical
++high-frequency spatial information for fine-grained feature representation.
+ """
+ import torch
+ import torch.nn as nn
+@@ -113,7 +113,7 @@
+ 
+ 
+ def get_augmentation():
+-    """Return CIFAR-100 data augmentations."""
++    """Return CIFAR-100 data augmentations without Gaussian Blur."""
+     mean = (0.5071, 0.4867, 0.4408)
+     std = (0.2675, 0.2565, 0.2761)
+ 
+@@ -122,7 +122,6 @@
+         transforms.RandomHorizontalFlip(),
+         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+         transforms.RandomGrayscale(p=0.2),
+-        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.5),
+         transforms.ToTensor(),
+         transforms.Normalize(mean, std),
+     ])

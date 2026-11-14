@@ -1,0 +1,11 @@
+--- iter_001/algorithm.py (best)
++++ iter_009/algorithm.py
+@@ -118,7 +118,7 @@
+     std = (0.2675, 0.2565, 0.2761)
+ 
+     return transforms.Compose([
+-        transforms.RandomResizedCrop(32, scale=(0.2, 1.0)),
++        transforms.RandomResizedCrop(32, scale=(0.08, 1.0)),
+         transforms.RandomHorizontalFlip(),
+         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+         transforms.RandomGrayscale(p=0.2),

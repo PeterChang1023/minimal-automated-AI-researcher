@@ -1,0 +1,11 @@
+--- iter_001/algorithm.py (best)
++++ iter_005/algorithm.py
+@@ -18,7 +18,7 @@
+     Keeps the required class name and constructor interface for harness compatibility.
+     """
+ 
+-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.15):
++    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.20):
+         super().__init__()
+         self.lambda_param = lambda_param
+         self.embedding_dim = embedding_dim

@@ -1,0 +1,484 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Research loop trace</title><style>
+:root{--bg:#fcfcfb;--card:#ffffff;--ink:#0b0b0b;--ink2:#52514e;--line:#e6e5e0;--llm:#6250d6;--llm-bg:#f1effc;
+--prog:#2a78d6;--prog-bg:#eef4fc;--add:#e6f6ee;--del:#fdecec;--acc:#2a78d6;--rej:#b4461d;--bad:#c53030}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1a19;--card:#232322;--ink:#f0efec;--ink2:#c3c2b7;
+--line:#3a3a37;--llm:#9085e9;--llm-bg:#2a2740;--prog:#3987e5;--prog-bg:#1f2b3b;--add:#1d3328;--del:#3b2222;--acc:#3987e5;--rej:#e07a4f;--bad:#e66767}}
+:root[data-theme="dark"]{--bg:#1a1a19;--card:#232322;--ink:#f0efec;--ink2:#c3c2b7;--line:#3a3a37;--llm:#9085e9;--llm-bg:#2a2740;
+--prog:#3987e5;--prog-bg:#1f2b3b;--add:#1d3328;--del:#3b2222;--acc:#3987e5;--rej:#e07a4f;--bad:#e66767}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:24px 16px}h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:0 0 12px}
+.muted{color:var(--ink2);font-weight:400;font-size:13px}.meta{color:var(--ink2);font-size:13px}
+img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0}.legend span{display:flex;align-items:center;gap:6px;font-size:13px}
+.sw{width:12px;height:12px;border-radius:3px}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:16px 0}
+.stages{display:grid;gap:8px}.stage{border-left:4px solid;border-radius:6px;padding:8px 12px}
+.stage.llm{border-color:var(--llm);background:var(--llm-bg)}.stage.prog{border-color:var(--prog);background:var(--prog-bg)}
+.stage-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.llm .tag{color:var(--llm)}.prog .tag{color:var(--prog)}.stage-t{font-weight:600}
+dl{margin:6px 0}dt{font-size:12px;color:var(--ink2)}dd{margin:0 0 6px}
+pre{white-space:pre-wrap;word-break:break-word;font:12px/1.45 ui-monospace,Menlo,monospace;margin:6px 0;overflow-x:auto}
+.diff{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px;max-height:480px;overflow:auto}
+.diff .add{background:var(--add);display:block}.diff .del{background:var(--del);display:block}.diff .hunk{color:var(--ink2);display:block}
+.result{font-size:16px}.acc{font-weight:700;font-size:20px}.delta{color:var(--ink2)}
+.dec{font-weight:700;margin-left:8px}.dec.accepted,.dec.baseline{color:var(--acc)}.dec.rejected{color:var(--rej)}
+.err{color:var(--bad)}.pass{color:var(--acc);font-weight:600}.next{border-style:dashed}summary{cursor:pointer;color:var(--ink2)}
+</style></head><body><main><h1>Automated research trace · flash35-e130-10iter</h1><p class='meta'>FML-bench Representation_Learning_solo_learn · 130 pretrain epochs (upstream 130) · linear eval 100 ep · split val_ratio 0.057 seed 42 · LLM gemini gemini-3.5-flash · GPU NVIDIA H100 NVL, 95830 MiB, 590.48.01 · torch 2.1.0+cu121<br>Best: iter 10 at 57.73% · 10 candidates · selection on val only, hidden test never run by the loop</p><div class='legend'><span><i class='sw' style='background:var(--llm)'></i>LLM decision</span><span><i class='sw' style='background:var(--prog)'></i>Program check (deterministic code)</span></div><img src='progress.png' alt='Validation accuracy per iteration with best-so-far line'><section class='card'><h2>Iteration 0 <span class='muted'>· baseline · 2026-11-14T21:45:23+08:00</span></h2><div class='stages'><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>Proposal</span></div><p>None: unmodified upstream FML-bench <code>algorithm.py</code>.</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1069.4 s · pretrain loss ep1: 1635.9, ep20: 622.5, ep40: 437.4, ep60: 339.3, ep80: 274.0, ep100: 234.4, ep120: 213.8</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>47.27%</span> <span class='dec baseline'>baseline</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>Baseline under this budget: val_acc=0.4727.</pre></div></div></section><section class='card'><h2>Iteration 1 <span class='muted'>· candidate · 2026-11-14T21:46:05+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Replacing the Barlow Twins cross-correlation loss with InfoNCE (SimCLR) contrastive loss will significantly accelerate feature representation learning under the compute-constrained 130-epoch regime on CIFAR-100.</dd><dt>Rationale</dt><dd>Barlow Twins loss focuses on decorrelating 2048 feature dimensions, which requires many epochs (often 500-1000+) to converge effectively. Under a tight 130-epoch budget, decorrelation is incomplete. In contrast, InfoNCE loss uses instance contrastiveness against 2B-2 negatives per batch sample, delivering strong repulsive gradients from early pretraining epochs and converging much faster to discriminative features.</dd><dt>Expected effect</dt><dd>A noticeable increase in top-1 validation linear probe accuracy above the 0.4727 baseline.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 0)</span></div><p>Replaced feature decorrelation loss in BarlowTwinsLoss with temperature-scaled InfoNCE (NT-Xent) contrastive loss (temperature=0.15).</p><details><summary>show diff (44 + / 34 − lines)</summary><pre class='diff'><span class=''>--- iter_000/algorithm.py (best)</span>
+<span class=''>+++ iter_001/algorithm.py</span>
+<span class='hunk'>@@ -1,20 +1,10 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class='del'>-Baseline self-supervised learning algorithm: Barlow Twins on CIFAR-100.</span>
+<span class='add'>+Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.</span>
+<span class=''> </span>
+<span class='del'>-Barlow Twins learns representations by minimizing redundancy between</span>
+<span class='del'>-embedding dimensions via a cross-correlation loss. It does NOT require</span>
+<span class='del'>-negative pairs or momentum encoders — just two augmented views.</span>
+<span class='del'>-</span>
+<span class='del'>-This is a COMPUTE-CONSTRAINED setting: only 130 pretrain epochs (batch 512)</span>
+<span class='del'>-(vs 1000+ standard). Representations will not fully converge (~45-55%</span>
+<span class='del'>-linear probe accuracy vs ~70%+ at full training).</span>
+<span class='del'>-</span>
+<span class='del'>-Agents should modify this file to improve SSL under limited compute:</span>
+<span class='del'>-- Better loss functions (VICReg, DINO, SimCLR, etc.)</span>
+<span class='del'>-- Better augmentation strategies</span>
+<span class='del'>-- Better projection head design</span>
+<span class='del'>-- Learning rate scheduling</span>
+<span class='del'>-- Multi-crop strategies</span>
+<span class='add'>+Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)</span>
+<span class='add'>+provides stronger instance-discrimination gradients via negative pair repulsion</span>
+<span class='add'>+than cross-correlation decorrelation (Barlow Twins), leading to faster convergence</span>
+<span class='add'>+and better representation quality under short training schedules.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -23,29 +13,48 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsLoss(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;Barlow Twins loss: cross-correlation matrix → identity.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;InfoNCE (NT-Xent) loss replacing cross-correlation loss for fast SSL convergence.</span>
+<span class=''> </span>
+<span class='del'>-    def __init__(self, lambda_param=5e-3, embedding_dim=2048):</span>
+<span class='add'>+    Keeps the required class name and constructor interface for harness compatibility.</span>
+<span class='add'>+    &quot;&quot;&quot;</span>
+<span class='add'>+</span>
+<span class='add'>+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.15):</span>
+<span class=''>         super().__init__()</span>
+<span class=''>         self.lambda_param = lambda_param</span>
+<span class='del'>-        self.bn = nn.BatchNorm1d(embedding_dim, affine=False)</span>
+<span class='add'>+        self.embedding_dim = embedding_dim</span>
+<span class='add'>+        self.temperature = temperature</span>
+<span class=''> </span>
+<span class=''>     def forward(self, z1, z2):</span>
+<span class='del'>-        z1 = self.bn(z1)</span>
+<span class='del'>-        z2 = self.bn(z2)</span>
+<span class='add'>+        &quot;&quot;&quot;Compute InfoNCE contrastive loss over paired augmented views z1 and z2.&quot;&quot;&quot;</span>
+<span class=''>         batch_size = z1.shape[0]</span>
+<span class=''> </span>
+<span class='del'>-        # Cross-correlation matrix</span>
+<span class='del'>-        c = z1.T @ z2 / batch_size</span>
+<span class='add'>+        # L2-normalize projection vectors</span>
+<span class='add'>+        z1 = nn.functional.normalize(z1, dim=1)</span>
+<span class='add'>+        z2 = nn.functional.normalize(z2, dim=1)</span>
+<span class=''> </span>
+<span class='del'>-        # Loss: on-diagonal → 1, off-diagonal → 0</span>
+<span class='del'>-        on_diag = (1 - c.diagonal()).pow(2).sum()</span>
+<span class='del'>-        off_diag = c.flatten()[:-1].view(c.shape[0] - 1, c.shape[0] + 1)[:, 1:].flatten().pow(2).sum()</span>
+<span class='del'>-        return on_diag + self.lambda_param * off_diag</span>
+<span class='add'>+        # Concatenate embeddings: [2B, D]</span>
+<span class='add'>+        out = torch.cat([z1, z2], dim=0)</span>
+<span class='add'>+</span>
+<span class='add'>+        # Cosine similarity matrix scaled by temperature: [2B, 2B]</span>
+<span class='add'>+        similarity_matrix = torch.mm(out, out.t()) / self.temperature</span>
+<span class='add'>+</span>
+<span class='add'>+        # Mask out self-similarity on the diagonal</span>
+<span class='add'>+        similarity_matrix.fill_diagonal_(-1e9)</span>
+<span class='add'>+</span>
+<span class='add'>+        # Targets: z1_i matches z2_i (index i + B), z2_i matches z1_i (index i)</span>
+<span class='add'>+        targets = torch.cat(</span>
+<span class='add'>+            [</span>
+<span class='add'>+                torch.arange(batch_size, 2 * batch_size, device=z1.device),</span>
+<span class='add'>+                torch.arange(0, batch_size, device=z1.device),</span>
+<span class='add'>+            ],</span>
+<span class='add'>+            dim=0,</span>
+<span class='add'>+        )</span>
+<span class='add'>+</span>
+<span class='add'>+        return nn.functional.cross_entropy(similarity_matrix, targets)</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;3-layer projection head for Barlow Twins.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;3-layer projection head for self-supervised pretraining.&quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class='hunk'>@@ -64,7 +73,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsModel(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;ResNet-18 backbone + projection head for Barlow Twins.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;ResNet-18 backbone + projection head adapted for CIFAR-100.&quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class='hunk'>@@ -72,8 +81,8 @@</span>
+<span class=''>         backbone = models.resnet18(weights=None)</span>
+<span class=''>         self.backbone_dim = backbone.fc.in_features  # 512</span>
+<span class=''>         backbone.fc = nn.Identity()</span>
+<span class='del'>-        # Adapt for CIFAR-100 (32x32): smaller first conv, no maxpool</span>
+<span class='del'>-        backbone.conv1 = nn.Conv2d(3, 64, 3, 1, 1, bias=False)</span>
+<span class='add'>+        # Adapt for CIFAR-100 (32x32): 3x3 conv1, no maxpool</span>
+<span class='add'>+        backbone.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)</span>
+<span class=''>         backbone.maxpool = nn.Identity()</span>
+<span class=''>         self.backbone = backbone</span>
+<span class=''>         self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)</span>
+<span class='hunk'>@@ -85,26 +94,26 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_model():</span>
+<span class='del'>-    &quot;&quot;&quot;Return Barlow Twins model.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return model instance.&quot;&quot;&quot;</span>
+<span class=''>     return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_training_config():</span>
+<span class='del'>-    &quot;&quot;&quot;Return Barlow Twins training config (compute-constrained).&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return training hyperparameters.&quot;&quot;&quot;</span>
+<span class=''>     return {</span>
+<span class=''>         &#x27;pretrain_epochs&#x27;: 130,</span>
+<span class=''>         &#x27;linear_eval_epochs&#x27;: 100,</span>
+<span class=''>         &#x27;batch_size&#x27;: 512,</span>
+<span class=''>         &#x27;lr&#x27;: 0.4,</span>
+<span class=''>         &#x27;weight_decay&#x27;: 1e-4,</span>
+<span class='del'>-        &#x27;lambda_param&#x27;: 5e-3,       # Barlow Twins off-diagonal penalty</span>
+<span class='add'>+        &#x27;lambda_param&#x27;: 5e-3,</span>
+<span class=''>         &#x27;linear_lr&#x27;: 0.1,</span>
+<span class=''>         &#x27;linear_batch_size&#x27;: 256,</span>
+<span class=''>     }</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_augmentation():</span>
+<span class='del'>-    &quot;&quot;&quot;Return augmentation transforms for Barlow Twins.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return CIFAR-100 data augmentations.&quot;&quot;&quot;</span>
+<span class=''>     mean = (0.5071, 0.4867, 0.4408)</span>
+<span class=''>     std = (0.2675, 0.2565, 0.2761)</span>
+<span class=''> </span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1057.7 s · pretrain loss ep1: 5.4, ep20: 2.5, ep40: 2.3, ep60: 2.1, ep80: 2.0, ep100: 1.9, ep120: 1.8</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>56.37%</span> <span class=delta>+9.10 pts vs best</span> <span class='dec accepted'>accepted</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>ACCEPTED: val_acc 0.5637 &gt; best 0.4727 (+9.10 pts). Now the best.</pre></div></div></section><section class='card'><h2>Iteration 2 <span class='muted'>· candidate · 2026-11-14T22:04:26+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Decoupled Contrastive Loss (DCL) removes the positive pair penalty from the denominator of InfoNCE loss, preventing positive pair similarity from suppressing hard negative repulsive gradients and thereby accelerating feature representation learning within a 130-epoch compute budget.</dd><dt>Rationale</dt><dd>In standard InfoNCE (used in iter 1, reaching val_acc=0.5637), the positive pair similarity appears in both the numerator and denominator. When positive pair similarity becomes high, the gradient magnitude for negative pair separation is automatically diminished. DCL (Yeh et al., CVPR 2022) decouples the positive term from the denominator sum logsumexp. Under short pretraining schedules (130 epochs), this decoupling maintains strong repulsive gradients for hard negative discrimination, leading to faster feature quality convergence.</dd><dt>Expected effect</dt><dd>Improve linear evaluation accuracy over iter 1 (0.5637) by improving representation learning efficiency under short epoch budgets.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>Replaced standard InfoNCE loss in BarlowTwinsLoss with Decoupled Contrastive Loss (DCL) with temperature 0.1.</p><details><summary>show diff (30 + / 23 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_002/algorithm.py</span>
+<span class='hunk'>@@ -1,10 +1,10 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class='del'>-Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.</span>
+<span class='add'>+Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL) on CIFAR-100.</span>
+<span class=''> </span>
+<span class='del'>-Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)</span>
+<span class='del'>-provides stronger instance-discrimination gradients via negative pair repulsion</span>
+<span class='del'>-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence</span>
+<span class='del'>-and better representation quality under short training schedules.</span>
+<span class='add'>+Under compute constraints (130 pretrain epochs), Decoupled Contrastive Loss (DCL)</span>
+<span class='add'>+removes the positive pair term from the denominator of the contrastive loss function.</span>
+<span class='add'>+This eliminates positive-negative gradient coupling and prevents negative gradient</span>
+<span class='add'>+suppression, leading to faster representation learning than standard InfoNCE.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -13,44 +13,50 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsLoss(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;InfoNCE (NT-Xent) loss replacing cross-correlation loss for fast SSL convergence.</span>
+<span class='add'>+    &quot;&quot;&quot;Decoupled Contrastive Loss (DCL) replacing cross-correlation loss.</span>
+<span class=''> </span>
+<span class=''>     Keeps the required class name and constructor interface for harness compatibility.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class='del'>-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.15):</span>
+<span class='add'>+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.1):</span>
+<span class=''>         super().__init__()</span>
+<span class=''>         self.lambda_param = lambda_param</span>
+<span class=''>         self.embedding_dim = embedding_dim</span>
+<span class=''>         self.temperature = temperature</span>
+<span class=''> </span>
+<span class=''>     def forward(self, z1, z2):</span>
+<span class='del'>-        &quot;&quot;&quot;Compute InfoNCE contrastive loss over paired augmented views z1 and z2.&quot;&quot;&quot;</span>
+<span class='add'>+        &quot;&quot;&quot;Compute Decoupled Contrastive Loss (DCL) over paired augmented views z1 and z2.&quot;&quot;&quot;</span>
+<span class=''>         batch_size = z1.shape[0]</span>
+<span class=''> </span>
+<span class=''>         # L2-normalize projection vectors</span>
+<span class=''>         z1 = nn.functional.normalize(z1, dim=1)</span>
+<span class=''>         z2 = nn.functional.normalize(z2, dim=1)</span>
+<span class=''> </span>
+<span class='del'>-        # Concatenate embeddings: [2B, D]</span>
+<span class='del'>-        out = torch.cat([z1, z2], dim=0)</span>
+<span class='add'>+        # Positive pair similarity (dot product divided by temperature)</span>
+<span class='add'>+        pos_sim = (z1 * z2).sum(dim=-1) / self.temperature</span>
+<span class=''> </span>
+<span class='del'>-        # Cosine similarity matrix scaled by temperature: [2B, 2B]</span>
+<span class='del'>-        similarity_matrix = torch.mm(out, out.t()) / self.temperature</span>
+<span class='add'>+        # Compute cosine similarity matrices scaled by temperature</span>
+<span class='add'>+        sim_11 = torch.mm(z1, z1.t()) / self.temperature</span>
+<span class='add'>+        sim_12 = torch.mm(z1, z2.t()) / self.temperature</span>
+<span class='add'>+        sim_22 = torch.mm(z2, z2.t()) / self.temperature</span>
+<span class=''> </span>
+<span class='del'>-        # Mask out self-similarity on the diagonal</span>
+<span class='del'>-        similarity_matrix.fill_diagonal_(-1e9)</span>
+<span class='add'>+        # Create diagonal mask to exclude self-similarity and positive pairs from negative pool</span>
+<span class='add'>+        mask_diag = torch.eye(batch_size, dtype=torch.bool, device=z1.device)</span>
+<span class=''> </span>
+<span class='del'>-        # Targets: z1_i matches z2_i (index i + B), z2_i matches z1_i (index i)</span>
+<span class='del'>-        targets = torch.cat(</span>
+<span class='del'>-            [</span>
+<span class='del'>-                torch.arange(batch_size, 2 * batch_size, device=z1.device),</span>
+<span class='del'>-                torch.arange(0, batch_size, device=z1.device),</span>
+<span class='del'>-            ],</span>
+<span class='del'>-            dim=0,</span>
+<span class='del'>-        )</span>
+<span class='add'>+        sim_11 = sim_11.masked_fill(mask_diag, -1e9)</span>
+<span class='add'>+        sim_22 = sim_22.masked_fill(mask_diag, -1e9)</span>
+<span class='add'>+        sim_12 = sim_12.masked_fill(mask_diag, -1e9)</span>
+<span class='add'>+        sim_21 = sim_12.t()</span>
+<span class=''> </span>
+<span class='del'>-        return nn.functional.cross_entropy(similarity_matrix, targets)</span>
+<span class='add'>+        # DCL loss for z1 as anchor (negatives are all z1_k and z2_k for k != i)</span>
+<span class='add'>+        neg_1 = torch.cat([sim_11, sim_12], dim=1)</span>
+<span class='add'>+        loss_1 = -pos_sim + torch.logsumexp(neg_1, dim=1)</span>
+<span class='add'>+</span>
+<span class='add'>+        # DCL loss for z2 as anchor</span>
+<span class='add'>+        neg_2 = torch.cat([sim_22, sim_21], dim=1)</span>
+<span class='add'>+        loss_2 = -pos_sim + torch.logsumexp(neg_2, dim=1)</span>
+<span class='add'>+</span>
+<span class='add'>+        return (loss_1.mean() + loss_2.mean()) / 2.0</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1066.1 s · pretrain loss ep1: 5.2, ep20: 0.5, ep40: 0.1, ep60: -0.2, ep80: -0.5, ep100: -0.8, ep120: -1.0</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>55.94%</span> <span class=delta>-0.43 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.5594 &lt;= best 0.5637 (-0.43 pts). Best code kept.</pre></div></div></section><section class='card'><h2>Iteration 3 <span class='muted'>· candidate · 2026-11-14T22:22:54+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Lowering the InfoNCE temperature parameter from 0.15 to 0.10 sharpens the penalty on hard negative pairs, encouraging finer semantic discrimination across CIFAR-100&#x27;s 100 classes under a 130-epoch compute budget.</dd><dt>Rationale</dt><dd>In Iter 1, replacing Barlow Twins with InfoNCE (temperature=0.15) boosted accuracy from 0.4727 to 0.5637. In contrastive learning (SimCLR), smaller temperatures (e.g. 0.07-0.10) act as implicit hard negative mining by heavily weighting gradient updates for negative pairs with high similarity. On CIFAR-100 with a batch size of 512 (1024 total views), fine-grained class boundaries benefit from sharper negative repulsion.</dd><dt>Expected effect</dt><dd>Improved linear-probe accuracy over the current best (0.5637) due to better feature separation of semantically close negative pairs.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>Set temperature parameter to 0.10 (from 0.15) in BarlowTwinsLoss (InfoNCE).</p><details><summary>show diff (4 + / 4 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_003/algorithm.py</span>
+<span class='hunk'>@@ -2,9 +2,8 @@</span>
+<span class=''> Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.</span>
+<span class=''> </span>
+<span class=''> Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)</span>
+<span class='del'>-provides stronger instance-discrimination gradients via negative pair repulsion</span>
+<span class='del'>-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence</span>
+<span class='del'>-and better representation quality under short training schedules.</span>
+<span class='add'>+with an optimized temperature scaling parameter (t=0.10) sharpens hard negative repulsion,</span>
+<span class='add'>+accelerating feature representation learning across CIFAR-100&#x27;s 100 fine-grained classes.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -18,7 +17,7 @@</span>
+<span class=''>     Keeps the required class name and constructor interface for harness compatibility.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class='del'>-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.15):</span>
+<span class='add'>+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10):</span>
+<span class=''>         super().__init__()</span>
+<span class=''>         self.lambda_param = lambda_param</span>
+<span class=''>         self.embedding_dim = embedding_dim</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1066.5 s · pretrain loss ep1: 5.2, ep20: 1.4, ep40: 1.1, ep60: 1.0, ep80: 0.8, ep100: 0.7, ep120: 0.6</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>53.26%</span> <span class=delta>-3.11 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.5326 &lt;= best 0.5637 (-3.11 pts). Best code kept.</pre></div></div></section><section class='card'><h2>Iteration 4 <span class='muted'>· candidate · 2026-11-14T22:41:15+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Gaussian blur on low-resolution 32x32 CIFAR-100 images destroys high-frequency spatial details required to distinguish fine-grained classes. Removing Gaussian blur from the augmentation pipeline will improve representation quality under short pretraining.</dd><dt>Rationale</dt><dd>In standard SimCLR/SSL practices for low-resolution datasets like CIFAR-10/100, Gaussian blur is commonly omitted because 32x32 images already lack spatial resolution. Blurring 32x32 patches creates featureless color blobs, degrading fine-grained semantic learning. Removing Gaussian blur while keeping temperature=0.15 InfoNCE (best from iter 1) should allow the backbone to learn sharper spatial features.</dd><dt>Expected effect</dt><dd>Higher linear evaluation top-1 validation accuracy on CIFAR-100, improving upon the 0.5637 baseline from iteration 1.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>Removed RandomApply(GaussianBlur) from the augmentation pipeline in get_augmentation().</p><details><summary>show diff (5 + / 5 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_004/algorithm.py</span>
+<span class='hunk'>@@ -2,9 +2,9 @@</span>
+<span class=''> Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.</span>
+<span class=''> </span>
+<span class=''> Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)</span>
+<span class='del'>-provides stronger instance-discrimination gradients via negative pair repulsion</span>
+<span class='del'>-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence</span>
+<span class='del'>-and better representation quality under short training schedules.</span>
+<span class='add'>+provides stronger instance-discrimination gradients via negative pair repulsion.</span>
+<span class='add'>+For 32x32 low-resolution CIFAR-100 images, omitting Gaussian blur preserves critical</span>
+<span class='add'>+high-frequency spatial information for fine-grained feature representation.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -113,7 +113,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> def get_augmentation():</span>
+<span class='del'>-    &quot;&quot;&quot;Return CIFAR-100 data augmentations.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Return CIFAR-100 data augmentations without Gaussian Blur.&quot;&quot;&quot;</span>
+<span class=''>     mean = (0.5071, 0.4867, 0.4408)</span>
+<span class=''>     std = (0.2675, 0.2565, 0.2761)</span>
+<span class=''> </span>
+<span class='hunk'>@@ -122,7 +122,6 @@</span>
+<span class=''>         transforms.RandomHorizontalFlip(),</span>
+<span class=''>         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),</span>
+<span class=''>         transforms.RandomGrayscale(p=0.2),</span>
+<span class='del'>-        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.5),</span>
+<span class=''>         transforms.ToTensor(),</span>
+<span class=''>         transforms.Normalize(mean, std),</span>
+<span class=''>     ])</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 884.2 s · pretrain loss ep1: 5.2, ep20: 2.4, ep40: 2.2, ep60: 2.1, ep80: 1.9, ep100: 1.8, ep120: 1.7</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>55.58%</span> <span class=delta>-0.79 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.5558 &lt;= best 0.5637 (-0.79 pts). Best code kept.</pre></div></div></section><section class='card'><h2>Iteration 5 <span class='muted'>· candidate · 2026-11-14T22:56:38+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Increasing the InfoNCE temperature parameter from 0.15 to 0.20 will soften the negative contrastive penalty, reducing gradient noise and variance caused by the relatively small pool of negatives (1023 negatives per sample at batch size 512) and enabling smoother representation alignment under a short 130-epoch pretraining schedule.</dd><dt>Rationale</dt><dd>Iter 3 showed that sharpening the temperature from 0.15 to 0.10 significantly degraded performance (0.5326 vs 0.5637). This indicates that over-concentrating gradients on hard negatives is detrimental when batch size (512) and pretraining duration (130 epochs) are limited. Testing temperature 0.20 directly probes the opposite direction of the temperature hyperspace.</dd><dt>Expected effect</dt><dd>Smoother InfoNCE gradient updates that prevent early feature collapse and yield better linear probe accuracy on CIFAR-100 (&gt;0.5637).</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>Set temperature=0.20 in BarlowTwinsLoss (InfoNCE).</p><details><summary>show diff (2 + / 1 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_005/algorithm.py</span>
+<span class='hunk'>@@ -18,7 +18,7 @@</span>
+<span class=''>     Keeps the required class name and constructor interface for harness compatibility.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class='del'>-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.15):</span>
+<span class='add'>+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.20):</span>
+<span class=''>         super().__init__()</span>
+<span class=''>         self.lambda_param = lambda_param</span>
+<span class=''>         self.embedding_dim = embedding_dim</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1054.0 s · pretrain loss ep1: 5.3, ep20: 3.4, ep40: 3.3, ep60: 3.2, ep80: 3.0, ep100: 2.9, ep120: 2.8</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>55.88%</span> <span class=delta>-0.50 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.5588 &lt;= best 0.5637 (-0.50 pts). Best code kept.</pre></div></div></section><section class='card'><h2>Iteration 6 <span class='muted'>· candidate · 2026-11-14T23:15:03+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Replacing the 3-layer MLP projection head with a standard 2-layer MLP head (Linear-BN-ReLU-Linear) will accelerate gradient propagation to the ResNet-18 backbone, improving linear evaluation representation quality under a 130-epoch pretraining schedule.</dd><dt>Rationale</dt><dd>In iter 1, adopting InfoNCE loss achieved the current best val acc (0.5637). However, the baseline projection head is a 3-layer MLP containing ~9.4M parameters (nearly doubling the backbone&#x27;s capacity). Under short pretraining budgets (130 epochs), a 3-layer head can absorb representation structure in its intermediate non-linear layers rather than forcing the backbone features (512-d) to become linearly separable. Standard SimCLR (Chen et al., 2020) utilizes a 2-layer MLP head, which shortens the gradient path back to the backbone features evaluated during linear probing.</dd><dt>Expected effect</dt><dd>Faster convergence of backbone representations and higher linear probe validation accuracy.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>Simplified ProjectionHead from a 3-layer MLP (Linear-BN-ReLU-Linear-BN-ReLU-Linear) to a standard 2-layer MLP (Linear-BN-ReLU-Linear).</p><details><summary>show diff (7 + / 9 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_006/algorithm.py</span>
+<span class='hunk'>@@ -1,10 +1,10 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class='del'>-Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.</span>
+<span class='add'>+Self-supervised learning algorithm: SimCLR (InfoNCE) with 2-layer Projection Head on CIFAR-100.</span>
+<span class=''> </span>
+<span class='del'>-Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)</span>
+<span class='del'>-provides stronger instance-discrimination gradients via negative pair repulsion</span>
+<span class='del'>-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence</span>
+<span class='del'>-and better representation quality under short training schedules.</span>
+<span class='add'>+Under severe compute constraints (130 pretrain epochs), a 2-layer MLP projection head</span>
+<span class='add'>+(Linear -&gt; BN -&gt; ReLU -&gt; Linear) provides a shorter gradient path to the ResNet-18 backbone</span>
+<span class='add'>+compared to a 3-layer head, forcing the backbone features to acquire higher-quality</span>
+<span class='add'>+invariant representations faster.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -54,15 +54,12 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;3-layer projection head for self-supervised pretraining.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;Standard 2-layer projection head (Linear-BN-ReLU-Linear) for SimCLR.&quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class=''>         self.net = nn.Sequential(</span>
+<span class=''>             nn.Linear(input_dim, hidden_dim),</span>
+<span class='del'>-            nn.BatchNorm1d(hidden_dim),</span>
+<span class='del'>-            nn.ReLU(inplace=True),</span>
+<span class='del'>-            nn.Linear(hidden_dim, hidden_dim),</span>
+<span class=''>             nn.BatchNorm1d(hidden_dim),</span>
+<span class=''>             nn.ReLU(inplace=True),</span>
+<span class=''>             nn.Linear(hidden_dim, output_dim),</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1061.8 s · pretrain loss ep1: 5.1, ep20: 2.5, ep40: 2.3, ep60: 2.1, ep80: 2.0, ep100: 1.9, ep120: 1.8</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>56.14%</span> <span class=delta>-0.23 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.5614 &lt;= best 0.5637 (-0.23 pts). Best code kept.</pre></div></div></section><section class='card'><h2>Iteration 7 <span class='muted'>· candidate · 2026-11-14T23:33:40+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Combining InfoNCE contrastive loss with an off-diagonal feature decorrelation penalty (from Barlow Twins / VICReg) prevents dimensional collapse in the projection space, forcing features to utilize all representation dimensions independently and leading to richer linear evaluation features under short pretraining schedules.</dd><dt>Rationale</dt><dd>Iter 1 established that InfoNCE contrastive learning dramatically outperforms Barlow Twins alone (0.5637 vs 0.4727). However, pure contrastive learning often suffers from dimensional collapse where feature dimensions become highly correlated. By adding an off-diagonal cross-correlation regularizer (weighted by lambda_param=5e-3) to the InfoNCE loss, we combine instance discrimination (sample repulsion) with feature decorrelation (dimensionality expansion) without adding extra parameters or changing the harness interface.</dd><dt>Expected effect</dt><dd>Improved feature diversity across all 512 backbone dimensions, accelerating representation learning and raising top-1 validation accuracy beyond 0.5637.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>Added an off-diagonal cross-correlation decorrelation loss term (weighted by lambda_param) to the InfoNCE loss inside BarlowTwinsLoss.forward().</p><details><summary>show diff (22 + / 18 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_007/algorithm.py</span>
+<span class='hunk'>@@ -1,10 +1,11 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class='del'>-Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.</span>
+<span class='add'>+Self-supervised learning algorithm: InfoNCE + Feature Decorrelation Regularization on CIFAR-100.</span>
+<span class=''> </span>
+<span class='del'>-Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)</span>
+<span class='del'>-provides stronger instance-discrimination gradients via negative pair repulsion</span>
+<span class='del'>-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence</span>
+<span class='del'>-and better representation quality under short training schedules.</span>
+<span class='add'>+Under severe compute constraints (130 pretrain epochs), InfoNCE contrastive learning</span>
+<span class='add'>+provides strong instance discrimination, but risks dimensional collapse where projection</span>
+<span class='add'>+features become mutually redundant. Adding a Barlow Twins-style off-diagonal cross-correlation</span>
+<span class='add'>+decorrelation penalty forces embedding dimensions to remain orthogonal, maximizing feature</span>
+<span class='add'>+capacity and accelerating representation learning.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -13,7 +14,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class BarlowTwinsLoss(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;InfoNCE (NT-Xent) loss replacing cross-correlation loss for fast SSL convergence.</span>
+<span class='add'>+    &quot;&quot;&quot;InfoNCE contrastive loss combined with off-diagonal feature decorrelation regularization.</span>
+<span class=''> </span>
+<span class=''>     Keeps the required class name and constructor interface for harness compatibility.</span>
+<span class=''>     &quot;&quot;&quot;</span>
+<span class='hunk'>@@ -25,23 +26,17 @@</span>
+<span class=''>         self.temperature = temperature</span>
+<span class=''> </span>
+<span class=''>     def forward(self, z1, z2):</span>
+<span class='del'>-        &quot;&quot;&quot;Compute InfoNCE contrastive loss over paired augmented views z1 and z2.&quot;&quot;&quot;</span>
+<span class='add'>+        &quot;&quot;&quot;Compute combined InfoNCE + feature decorrelation loss over paired augmented views z1 and z2.&quot;&quot;&quot;</span>
+<span class=''>         batch_size = z1.shape[0]</span>
+<span class=''> </span>
+<span class='del'>-        # L2-normalize projection vectors</span>
+<span class='del'>-        z1 = nn.functional.normalize(z1, dim=1)</span>
+<span class='del'>-        z2 = nn.functional.normalize(z2, dim=1)</span>
+<span class='add'>+        # 1. InfoNCE (NT-Xent) Loss with L2-normalized embeddings</span>
+<span class='add'>+        z1_norm = nn.functional.normalize(z1, dim=1)</span>
+<span class='add'>+        z2_norm = nn.functional.normalize(z2, dim=1)</span>
+<span class=''> </span>
+<span class='del'>-        # Concatenate embeddings: [2B, D]</span>
+<span class='del'>-        out = torch.cat([z1, z2], dim=0)</span>
+<span class='del'>-</span>
+<span class='del'>-        # Cosine similarity matrix scaled by temperature: [2B, 2B]</span>
+<span class='add'>+        out = torch.cat([z1_norm, z2_norm], dim=0)</span>
+<span class=''>         similarity_matrix = torch.mm(out, out.t()) / self.temperature</span>
+<span class='del'>-</span>
+<span class='del'>-        # Mask out self-similarity on the diagonal</span>
+<span class=''>         similarity_matrix.fill_diagonal_(-1e9)</span>
+<span class=''> </span>
+<span class='del'>-        # Targets: z1_i matches z2_i (index i + B), z2_i matches z1_i (index i)</span>
+<span class=''>         targets = torch.cat(</span>
+<span class=''>             [</span>
+<span class=''>                 torch.arange(batch_size, 2 * batch_size, device=z1.device),</span>
+<span class='hunk'>@@ -49,8 +44,16 @@</span>
+<span class=''>             ],</span>
+<span class=''>             dim=0,</span>
+<span class=''>         )</span>
+<span class='add'>+        loss_infonce = nn.functional.cross_entropy(similarity_matrix, targets)</span>
+<span class=''> </span>
+<span class='del'>-        return nn.functional.cross_entropy(similarity_matrix, targets)</span>
+<span class='add'>+        # 2. Off-diagonal Cross-Correlation Decorrelation Regularization</span>
+<span class='add'>+        z1_bn = (z1 - z1.mean(dim=0)) / (z1.std(dim=0) + 1e-5)</span>
+<span class='add'>+        z2_bn = (z2 - z2.mean(dim=0)) / (z2.std(dim=0) + 1e-5)</span>
+<span class='add'>+</span>
+<span class='add'>+        c = torch.mm(z1_bn.T, z2_bn) / batch_size</span>
+<span class='add'>+        off_diag_loss = c.pow(2).sum() - torch.diagonal(c).pow(2).sum()</span>
+<span class='add'>+</span>
+<span class='add'>+        return loss_infonce + self.lambda_param * off_diag_loss</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1068.2 s · pretrain loss ep1: 383.7, ep20: 86.8, ep40: 64.5, ep60: 80.7, ep80: 60.3, ep100: 65.6, ep120: 51.7</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>6.36%</span> <span class=delta>-50.02 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.0636 &lt;= best 0.5637 (-50.02 pts). Best code kept.</pre></div></div></section><section class='card'><h2>Iteration 8 <span class='muted'>· candidate · 2026-11-14T23:52:22+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Adding a final BatchNorm1d layer (with affine=False) to the 3-layer projection head standardizes feature variances across all 2048 projection dimensions before L2 normalization, preventing high-variance dimensions from dominating the cosine similarity matrix and improving gradient distribution to the backbone during 130-epoch pretraining.</dd><dt>Rationale</dt><dd>In iter 1, switching to InfoNCE loss achieved the best val accuracy of 0.5637 using L2-normalized projections. However, the 3-layer projection head in iter 1 lacked final batch normalization before L2 normalization. Without final BN, individual output dimensions can have unequal variances, causing L2 normalization to project vectors into an anisotropic subspace of the hypersphere and reducing effective representation capacity. Adding BatchNorm1d(output_dim, affine=False) ensures isotropic variance across all 2048 dimensions, maximizing representation entropy and accelerating feature learning.</dd><dt>Expected effect</dt><dd>Improved linear evaluation accuracy by encouraging uniform usage of all projection dimensions and providing balanced representation learning gradients.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>Added nn.BatchNorm1d(output_dim, affine=False) as the final layer in ProjectionHead.</p><details><summary>show diff (7 + / 5 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_008/algorithm.py</span>
+<span class='hunk'>@@ -1,10 +1,10 @@</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class='del'>-Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.</span>
+<span class='add'>+Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100</span>
+<span class='add'>+with final BatchNorm in the projection head for uniform feature representation.</span>
+<span class=''> </span>
+<span class=''> Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)</span>
+<span class='del'>-provides stronger instance-discrimination gradients via negative pair repulsion</span>
+<span class='del'>-than cross-correlation decorrelation (Barlow Twins), leading to faster convergence</span>
+<span class='del'>-and better representation quality under short training schedules.</span>
+<span class='add'>+with an isotropically normalized projection head provides well-distributed gradients</span>
+<span class='add'>+to the backbone, improving linear evaluation representation quality.</span>
+<span class=''> &quot;&quot;&quot;</span>
+<span class=''> import torch</span>
+<span class=''> import torch.nn as nn</span>
+<span class='hunk'>@@ -54,7 +54,7 @@</span>
+<span class=''> </span>
+<span class=''> </span>
+<span class=''> class ProjectionHead(nn.Module):</span>
+<span class='del'>-    &quot;&quot;&quot;3-layer projection head for self-supervised pretraining.&quot;&quot;&quot;</span>
+<span class='add'>+    &quot;&quot;&quot;3-layer projection head with final BatchNorm for isotropic feature scaling.&quot;&quot;&quot;</span>
+<span class=''> </span>
+<span class=''>     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):</span>
+<span class=''>         super().__init__()</span>
+<span class='hunk'>@@ -66,6 +66,7 @@</span>
+<span class=''>             nn.BatchNorm1d(hidden_dim),</span>
+<span class=''>             nn.ReLU(inplace=True),</span>
+<span class=''>             nn.Linear(hidden_dim, output_dim),</span>
+<span class='add'>+            nn.BatchNorm1d(output_dim, affine=False),</span>
+<span class=''>         )</span>
+<span class=''> </span>
+<span class=''>     def forward(self, x):</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1056.7 s · pretrain loss ep1: 4.9, ep20: 2.5, ep40: 2.3, ep60: 2.1, ep80: 2.0, ep100: 1.9, ep120: 1.8</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>54.98%</span> <span class=delta>-1.39 pts vs best</span> <span class='dec rejected'>rejected</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>REJECTED: val_acc 0.5498 &lt;= best 0.5637 (-1.39 pts). Best code kept.</pre></div></div></section><section class='card'><h2>Iteration 9 <span class='muted'>· candidate · 2026-11-15T00:10:30+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Lowering the minimum crop scale in RandomResizedCrop from 0.2 to 0.08 increases spatial view diversity by pairing small local sub-patches (~9x9 pixels) with global views, forcing the backbone to learn local-to-global scale-invariant representations essential for fine-grained CIFAR-100 classification.</dd><dt>Rationale</dt><dd>In Iter 1 (current best, val_acc 0.5637), switching to InfoNCE contrastive learning dramatically improved representation quality. However, the augmentation pipeline retained the Barlow Twins default crop scale range of (0.2, 1.0). Standard SimCLR relies heavily on aggressive scale cropping down to 0.08 (Chen et al., 2020) to generate scale-varying positive pairs. For 32x32 images with 100 fine-grained classes, forcing local patch views to match full image views prevents shortcut learning on global spatial layout and encourages invariant part-level representations within the 130-epoch compute budget.</dd><dt>Expected effect</dt><dd>Improved linear evaluation accuracy on CIFAR-100 by producing more robust scale-invariant features.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 1)</span></div><p>In get_augmentation(), changed transforms.RandomResizedCrop(32, scale=(0.2, 1.0)) to transforms.RandomResizedCrop(32, scale=(0.08, 1.0)).</p><details><summary>show diff (2 + / 1 − lines)</summary><pre class='diff'><span class=''>--- iter_001/algorithm.py (best)</span>
+<span class=''>+++ iter_009/algorithm.py</span>
+<span class='hunk'>@@ -118,7 +118,7 @@</span>
+<span class=''>     std = (0.2675, 0.2565, 0.2761)</span>
+<span class=''> </span>
+<span class=''>     return transforms.Compose([</span>
+<span class='del'>-        transforms.RandomResizedCrop(32, scale=(0.2, 1.0)),</span>
+<span class='add'>+        transforms.RandomResizedCrop(32, scale=(0.08, 1.0)),</span>
+<span class=''>         transforms.RandomHorizontalFlip(),</span>
+<span class=''>         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),</span>
+<span class=''>         transforms.RandomGrayscale(p=0.2),</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1060.6 s · pretrain loss ep1: 5.6, ep20: 3.1, ep40: 2.9, ep60: 2.7, ep80: 2.6, ep100: 2.4, ep120: 2.3</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>57.63%</span> <span class=delta>+1.26 pts vs best</span> <span class='dec accepted'>accepted</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>ACCEPTED: val_acc 0.5763 &gt; best 0.5637 (+1.26 pts). Now the best.</pre></div></div></section><section class='card'><h2>Iteration 10 <span class='muted'>· candidate · 2026-11-15T00:30:28+08:00</span></h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>1 · Propose (gemini gemini-3.5-flash)</span></div><dl><dt>Hypothesis</dt><dd>Increasing the pretraining learning rate from 0.4 to 0.6 will accelerate feature convergence under SGD with cosine annealing within the short 130-epoch budget, yielding a better linear-probe representation.</dd><dt>Rationale</dt><dd>In Iter 1, we switched from Barlow Twins to InfoNCE contrastive loss but kept the default learning rate (lr=0.4) designed for Barlow Twins. Contrastive InfoNCE loss has different gradient dynamics and scale. Under a severe compute constraint of 130 pretraining epochs, the cosine decay schedule lowers the learning rate rapidly. Increasing initial lr to 0.6 allows SGD with 0.9 momentum to take larger gradient steps in early-to-mid epochs, improving representation quality before learning rate decays.</dd><dt>Expected effect</dt><dd>Faster feature representation learning during the 130 epochs, leading to strictly higher validation linear-probe accuracy over the current best (0.5763).</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>2 · Modify: diff vs best (iter 9)</span></div><p>In get_training_config(), set &#x27;lr&#x27;: 0.6 (increased from 0.4).</p><details><summary>show diff (2 + / 1 − lines)</summary><pre class='diff'><span class=''>--- iter_009/algorithm.py (best)</span>
+<span class=''>+++ iter_010/algorithm.py</span>
+<span class='hunk'>@@ -104,7 +104,7 @@</span>
+<span class=''>         &#x27;pretrain_epochs&#x27;: 130,</span>
+<span class=''>         &#x27;linear_eval_epochs&#x27;: 100,</span>
+<span class=''>         &#x27;batch_size&#x27;: 512,</span>
+<span class='del'>-        &#x27;lr&#x27;: 0.4,</span>
+<span class='add'>+        &#x27;lr&#x27;: 0.6,</span>
+<span class=''>         &#x27;weight_decay&#x27;: 1e-4,</span>
+<span class=''>         &#x27;lambda_param&#x27;: 5e-3,</span>
+<span class=''>         &#x27;linear_lr&#x27;: 0.1,</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>3 · Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>4 · Execute (smoke test + official eval, val split)</span></div><p>status <b>ok</b> · wall 1054.4 s · pretrain loss ep1: 5.7, ep20: 3.2, ep40: 2.9, ep60: 2.8, ep80: 2.6, ep100: 2.5, ep120: 2.3</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>5 · Evaluate (accept iff val acc strictly &gt; best)</span></div><p class='result'><span class='acc'>57.73%</span> <span class=delta>+0.10 pts vs best</span> <span class='dec accepted'>accepted</span></p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>6 · Record → feedback in the next prompt</span></div><pre class='fb'>ACCEPTED: val_acc 0.5773 &gt; best 0.5763 (+0.10 pts). Now the best.</pre></div></div></section><section class='card next'><h2>Next proposal</h2><div class='stages'><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>Propose (uses feedback from iters [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])</span></div><dl><dt>Hypothesis</dt><dd>Further increasing the pretraining learning rate from 0.6 to 0.8 will continue to accelerate representation learning under SGD with cosine decay within the short 130-epoch compute budget, allowing features to traverse representation space faster before the learning rate decays.</dd><dt>Rationale</dt><dd>In iter 10, increasing the learning rate from 0.4 to 0.6 improved validation accuracy from 0.5763 to 0.5773 (+0.10 pts). For SGD with momentum 0.9 at batch size 512 under a brief 130-epoch schedule, higher initial learning rates allow larger feature update steps during the early warm phase before cosine decay significantly reduces the step size.</dd><dt>Expected effect</dt><dd>Linear probe top-1 validation accuracy will increase beyond 0.5773.</dd></dl></div><div class='stage llm'><div class='stage-h'><span class='tag'>LLM decision</span><span class='stage-t'>Modify: diff vs best</span></div><p>In get_training_config(), set &#x27;lr&#x27;: 0.8 (increased from 0.6).</p><details><summary>show diff</summary><pre class='diff'><span class=''>--- iter_010/algorithm.py (best)</span>
+<span class=''>+++ next_proposal/algorithm.py</span>
+<span class='hunk'>@@ -104,7 +104,7 @@</span>
+<span class=''>         &#x27;pretrain_epochs&#x27;: 130,</span>
+<span class=''>         &#x27;linear_eval_epochs&#x27;: 100,</span>
+<span class=''>         &#x27;batch_size&#x27;: 512,</span>
+<span class='del'>-        &#x27;lr&#x27;: 0.6,</span>
+<span class='add'>+        &#x27;lr&#x27;: 0.8,</span>
+<span class=''>         &#x27;weight_decay&#x27;: 1e-4,</span>
+<span class=''>         &#x27;lambda_param&#x27;: 5e-3,</span>
+<span class=''>         &#x27;linear_lr&#x27;: 0.1,</span></pre></details></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>Static checks</span></div><p class='pass'>passed</p></div><div class='stage prog'><div class='stage-h'><span class='tag'>Program check</span><span class='stage-t'>Status</span></div><p>proposed, <b>not executed</b></p></div></div></section></main></body></html>

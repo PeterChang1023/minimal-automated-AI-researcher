@@ -1,0 +1,6 @@
+{
+  "hypothesis": "Gaussian blur on low-resolution 32x32 CIFAR-100 images destroys high-frequency spatial details required to distinguish fine-grained classes. Removing Gaussian blur from the augmentation pipeline will improve representation quality under short pretraining.",
+  "rationale": "In standard SimCLR/SSL practices for low-resolution datasets like CIFAR-10/100, Gaussian blur is commonly omitted because 32x32 images already lack spatial resolution. Blurring 32x32 patches creates featureless color blobs, degrading fine-grained semantic learning. Removing Gaussian blur while keeping temperature=0.15 InfoNCE (best from iter 1) should allow the backbone to learn sharper spatial features.",
+  "expected_effect": "Higher linear evaluation top-1 validation accuracy on CIFAR-100, improving upon the 0.5637 baseline from iteration 1.",
+  "change_summary": "Removed RandomApply(GaussianBlur) from the augmentation pipeline in get_augmentation()."
+}

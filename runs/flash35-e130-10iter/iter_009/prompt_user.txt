@@ -1,0 +1,218 @@
+## Task (FML-bench: Representation_Learning_solo_learn)
+Barlow Twins self-supervised pretraining of a CIFAR-adapted ResNet-18 on CIFAR-100,
+evaluated by linear-probe top-1 accuracy on a fixed validation split. Goal: maximise
+validation linear-probe accuracy under the FIXED compute budget below.
+
+You may change, inside algorithm.py only: the loss (e.g. VICReg/SimCLR/BYOL-style terms
+or Barlow Twins variants), projection head, backbone details, augmentation, and the
+pretraining hyperparameters lr / weight_decay / lambda_param / batch_size (<= 512).
+
+## Fixed by the harness (you cannot change these; any attempt is overridden or rejected)
+- Pretraining epochs: 130. Optimizer: SGD(momentum=0.9) + cosine schedule
+  over those epochs, defined in the official script (not in algorithm.py).
+- Linear evaluation protocol: 100 epochs, linear_lr=0.1,
+  linear_batch_size=256, on frozen `model.backbone` features.
+- Train/val split: split_config.json (val_ratio=0.057, val_seed=42) — fixed.
+- Seeds: the official script calls set_seed(42); linear-probe seed 100.
+- Wall-clock timeout per experiment: 60.0 minutes.
+
+## Interface the official script relies on (must be kept)
+- get_model() -> nn.Module with attributes .backbone, .projector, .backbone_dim;
+  forward(x) returns (features [B, backbone_dim], projections [B, 2048]).
+  The official script builds `BarlowTwinsLoss(lambda_param=cfg['lambda_param'], embedding_dim=2048)`
+  and calls `loss = criterion(z1, z2)` on the two projection batches, so the class
+  name, constructor arguments and the 2048-d projection output must stay.
+  (You may implement a different objective inside that class.)
+- get_training_config() -> dict with keys pretrain_epochs, linear_eval_epochs,
+  batch_size, lr, weight_decay, lambda_param, linear_lr, linear_batch_size.
+- get_augmentation() -> transform mapping a 32x32 PIL image to a [3,32,32] tensor.
+  It is applied independently to produce the two views.
+- Do not load data, read/write files, use the network, pretrained weights, or the shell.
+  Only torch / torchvision / numpy / math / PIL may be imported.
+
+## Scores under this budget
+- baseline val acc: 0.4727
+- current best val acc: 0.5637 (iter 1)
+- acceptance rule (program-checked): a candidate replaces the best only if it runs successfully and its val acc is STRICTLY higher than the current best.
+
+## History of experiments (oldest first)
+- iter   0 | baseline | status=ok | val_acc=0.4727 | decision=baseline
+    hypothesis: unmodified FML-bench Barlow Twins baseline
+    change: none
+    feedback: Baseline under this budget: val_acc=0.4727.
+- iter   1 | candidate | status=ok | val_acc=0.5637 | decision=accepted
+    hypothesis: Replacing the Barlow Twins cross-correlation loss with InfoNCE (SimCLR) contrastive loss will significantly accelerate feature representation learning under the compute-constrained 130-epoch regime on CIFAR-100.
+    change: Replaced feature decorrelation loss in BarlowTwinsLoss with temperature-scaled InfoNCE (NT-Xent) contrastive loss (temperature=0.15).
+    feedback: ACCEPTED: val_acc 0.5637 > best 0.4727 (+9.10 pts). Now the best.
+- iter   2 | candidate | status=ok | val_acc=0.5594 | decision=rejected
+    hypothesis: Decoupled Contrastive Loss (DCL) removes the positive pair penalty from the denominator of InfoNCE loss, preventing positive pair similarity from suppressing hard negative repulsive gradients and thereby accelerating feature representation learning within a 130-epoch compute budget.
+    change: Replaced standard InfoNCE loss in BarlowTwinsLoss with Decoupled Contrastive Loss (DCL) with temperature 0.1.
+    feedback: REJECTED: val_acc 0.5594 <= best 0.5637 (-0.43 pts). Best code kept.
+- iter   3 | candidate | status=ok | val_acc=0.5326 | decision=rejected
+    hypothesis: Lowering the InfoNCE temperature parameter from 0.15 to 0.10 sharpens the penalty on hard negative pairs, encouraging finer semantic discrimination across CIFAR-100's 100 classes under a 130-epoch compute budget.
+    change: Set temperature parameter to 0.10 (from 0.15) in BarlowTwinsLoss (InfoNCE).
+    feedback: REJECTED: val_acc 0.5326 <= best 0.5637 (-3.11 pts). Best code kept.
+- iter   4 | candidate | status=ok | val_acc=0.5558 | decision=rejected
+    hypothesis: Gaussian blur on low-resolution 32x32 CIFAR-100 images destroys high-frequency spatial details required to distinguish fine-grained classes. Removing Gaussian blur from the augmentation pipeline will improve representation quality under short pretraining.
+    change: Removed RandomApply(GaussianBlur) from the augmentation pipeline in get_augmentation().
+    feedback: REJECTED: val_acc 0.5558 <= best 0.5637 (-0.79 pts). Best code kept.
+- iter   5 | candidate | status=ok | val_acc=0.5588 | decision=rejected
+    hypothesis: Increasing the InfoNCE temperature parameter from 0.15 to 0.20 will soften the negative contrastive penalty, reducing gradient noise and variance caused by the relatively small pool of negatives (1023 negatives per sample at batch size 512) and enabling smoother representation alignment under a short 130-epoch pretraining schedule.
+    change: Set temperature=0.20 in BarlowTwinsLoss (InfoNCE).
+    feedback: REJECTED: val_acc 0.5588 <= best 0.5637 (-0.50 pts). Best code kept.
+- iter   6 | candidate | status=ok | val_acc=0.5614 | decision=rejected
+    hypothesis: Replacing the 3-layer MLP projection head with a standard 2-layer MLP head (Linear-BN-ReLU-Linear) will accelerate gradient propagation to the ResNet-18 backbone, improving linear evaluation representation quality under a 130-epoch pretraining schedule.
+    change: Simplified ProjectionHead from a 3-layer MLP (Linear-BN-ReLU-Linear-BN-ReLU-Linear) to a standard 2-layer MLP (Linear-BN-ReLU-Linear).
+    feedback: REJECTED: val_acc 0.5614 <= best 0.5637 (-0.23 pts). Best code kept.
+- iter   7 | candidate | status=ok | val_acc=0.0636 | decision=rejected
+    hypothesis: Combining InfoNCE contrastive loss with an off-diagonal feature decorrelation penalty (from Barlow Twins / VICReg) prevents dimensional collapse in the projection space, forcing features to utilize all representation dimensions independently and leading to richer linear evaluation features under short pretraining schedules.
+    change: Added an off-diagonal cross-correlation decorrelation loss term (weighted by lambda_param) to the InfoNCE loss inside BarlowTwinsLoss.forward().
+    feedback: REJECTED: val_acc 0.0636 <= best 0.5637 (-50.02 pts). Best code kept.
+- iter   8 | candidate | status=ok | val_acc=0.5498 | decision=rejected
+    hypothesis: Adding a final BatchNorm1d layer (with affine=False) to the 3-layer projection head standardizes feature variances across all 2048 projection dimensions before L2 normalization, preventing high-variance dimensions from dominating the cosine similarity matrix and improving gradient distribution to the backbone during 130-epoch pretraining.
+    change: Added nn.BatchNorm1d(output_dim, affine=False) as the final layer in ProjectionHead.
+    feedback: REJECTED: val_acc 0.5498 <= best 0.5637 (-1.39 pts). Best code kept.
+
+<current_best_algorithm>
+```python
+"""
+Self-supervised learning algorithm: InfoNCE (SimCLR) contrastive learning on CIFAR-100.
+
+Under severe compute constraints (130 pretrain epochs), contrastive loss (InfoNCE)
+provides stronger instance-discrimination gradients via negative pair repulsion
+than cross-correlation decorrelation (Barlow Twins), leading to faster convergence
+and better representation quality under short training schedules.
+"""
+import torch
+import torch.nn as nn
+import torchvision.models as models
+import torchvision.transforms as transforms
+
+
+class BarlowTwinsLoss(nn.Module):
+    """InfoNCE (NT-Xent) loss replacing cross-correlation loss for fast SSL convergence.
+
+    Keeps the required class name and constructor interface for harness compatibility.
+    """
+
+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.15):
+        super().__init__()
+        self.lambda_param = lambda_param
+        self.embedding_dim = embedding_dim
+        self.temperature = temperature
+
+    def forward(self, z1, z2):
+        """Compute InfoNCE contrastive loss over paired augmented views z1 and z2."""
+        batch_size = z1.shape[0]
+
+        # L2-normalize projection vectors
+        z1 = nn.functional.normalize(z1, dim=1)
+        z2 = nn.functional.normalize(z2, dim=1)
+
+        # Concatenate embeddings: [2B, D]
+        out = torch.cat([z1, z2], dim=0)
+
+        # Cosine similarity matrix scaled by temperature: [2B, 2B]
+        similarity_matrix = torch.mm(out, out.t()) / self.temperature
+
+        # Mask out self-similarity on the diagonal
+        similarity_matrix.fill_diagonal_(-1e9)
+
+        # Targets: z1_i matches z2_i (index i + B), z2_i matches z1_i (index i)
+        targets = torch.cat(
+            [
+                torch.arange(batch_size, 2 * batch_size, device=z1.device),
+                torch.arange(0, batch_size, device=z1.device),
+            ],
+            dim=0,
+        )
+
+        return nn.functional.cross_entropy(similarity_matrix, targets)
+
+
+class ProjectionHead(nn.Module):
+    """3-layer projection head for self-supervised pretraining."""
+
+    def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, output_dim),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class BarlowTwinsModel(nn.Module):
+    """ResNet-18 backbone + projection head adapted for CIFAR-100."""
+
+    def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):
+        super().__init__()
+        # ResNet-18 backbone (remove final FC)
+        backbone = models.resnet18(weights=None)
+        self.backbone_dim = backbone.fc.in_features  # 512
+        backbone.fc = nn.Identity()
+        # Adapt for CIFAR-100 (32x32): 3x3 conv1, no maxpool
+        backbone.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        backbone.maxpool = nn.Identity()
+        self.backbone = backbone
+        self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
+
+    def forward(self, x):
+        features = self.backbone(x)
+        projections = self.projector(features)
+        return features, projections
+
+
+def get_model():
+    """Return model instance."""
+    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
+
+
+def get_training_config():
+    """Return training hyperparameters."""
+    return {
+        'pretrain_epochs': 130,
+        'linear_eval_epochs': 100,
+        'batch_size': 512,
+        'lr': 0.4,
+        'weight_decay': 1e-4,
+        'lambda_param': 5e-3,
+        'linear_lr': 0.1,
+        'linear_batch_size': 256,
+    }
+
+
+def get_augmentation():
+    """Return CIFAR-100 data augmentations."""
+    mean = (0.5071, 0.4867, 0.4408)
+    std = (0.2675, 0.2565, 0.2761)
+
+    return transforms.Compose([
+        transforms.RandomResizedCrop(32, scale=(0.2, 1.0)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+        transforms.RandomGrayscale(p=0.2),
+        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.5),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std),
+    ])
+```
+</current_best_algorithm>
+
+## What to do now
+Propose the NEXT single experiment. Use the history: do not repeat a rejected idea
+unchanged, learn from failures (fix the cause), and prefer changes likely to matter
+under a SHORT budget (faster convergence). Change one idea at a time so the result is
+attributable. Keep the code runnable on one GPU within the timeout.
+
+Reply with exactly two fenced blocks and nothing else:
+1. ```json {"hypothesis": "...", "rationale": "... (cite history entries by iter id if relevant)",
+   "expected_effect": "...", "change_summary": "..."} ```
+2. ```python <the COMPLETE new algorithm.py> ```
