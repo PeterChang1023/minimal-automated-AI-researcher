@@ -1,5 +1,41 @@
 # Minimal automated AI researcher
 
+## How it works in one minute
+
+**Goal.** Learn a good image encoder **without labels** (self-supervised learning on CIFAR-100),
+and let an LLM search for changes to the training recipe that make that encoder better.
+
+**Workflow ① — train the encoder (images only, no labels)**
+
+```
+image ── random augmentation ×2 ──► view A, view B
+each view ──► Encoder (ResNet-18) ──► 512 features ──► Projection head (MLP) ──► 2048 ──► Loss: do A and B match?
+```
+
+- Only images are used; labels are never read in this step.
+- The projection head exists only to compute the loss and is thrown away after pretraining.
+- Result: the trained encoder.
+
+**Workflow ② — examine the encoder (labels are used only here)**
+
+```
+image ──► Encoder (frozen; what we trained) ──► 512 features ──► one Linear 512→100 (exam tool) ──► 100 class scores ──► highest = prediction
+```
+
+- The model we actually train is the **encoder**: its output is 512 numbers (features), **not** probabilities.
+- The 100-class distribution comes from the single linear classifier added in this step; it is only a tool for testing the encoder.
+- 100 scores = one score per class (how strongly the classifier thinks the image is that class). The label is the
+  index of the correct class, so a prediction is correct when the highest-scoring class equals the label.
+  Accuracy on the fixed validation split is the encoder's score.
+
+**Where the LLM comes in.** Gemini proposes a hypothesis and edits a *copy* of `algorithm.py` (loss, projection head,
+augmentation, hyper-parameters), i.e. the recipe of workflow ①. The program re-runs ① and ② from scratch, accepts the
+change only if validation accuracy is strictly higher than the current best, and writes the result back to Gemini as
+feedback. Gemini never scores anything; the evaluation code is locked (SHA-256) and test labels are never used.
+
+---
+
+
 See [`docs/EXAM_MAPPING.md`](docs/EXAM_MAPPING.md) for where each exam requirement is answered.
 
 A small, auditable **Propose → Modify → Execute → Evaluate → Record** loop on the
