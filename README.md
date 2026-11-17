@@ -1,5 +1,10 @@
 # Minimal automated AI researcher
 
+> **🔎 [Open the review page →](https://htmlpreview.github.io/?https://github.com/PeterChang1023/minimal-automated-AI-researcher/blob/main/runs/flash35-e130-10iter/viz/review.html)**
+> Every iteration of the main run (130 epochs, 10 iterations, val acc 47.27% → 57.73%) on one page:
+> what Gemini changed, the code diff, loss curve, automatic integrity checks, and a one-line verdict.
+> ([source](runs/flash35-e130-10iter/viz/review.html) · rebuild with `python scripts/build_review_page.py runs/flash35-e130-10iter`)
+
 ## How it works in one minute
 
 **Goal.** Learn a good image encoder **without labels** (self-supervised learning on CIFAR-100),
