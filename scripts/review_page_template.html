@@ -1,0 +1,600 @@
+<title>Loop Review · __RUN_NAME__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --sunk:#efeee8; --ink:#1c1e21; --muted:#676a70; --faint:#9a9ca0; --line:#e1dfd8;
+  --acc:#1d8458; --acc-soft:#dcefe5; --rej:#b0503f; --rej-soft:#f5e1dc; --base:#2d6cb0; --base-soft:#dde8f5;
+  --warn:#a8700f; --warn-soft:#f6ead2; --band:rgba(29,132,88,.12); --mark:#fbe38e; --mark-ink:#1c1e21;
+  --add:#e3f3e8; --add-strong:#bfe5cb; --del:#fbe6e3; --del-strong:#f3c3bb; --hunk:#eef1f6;
+  --kw:#7a3db3; --str:#a3540e; --num:#1b6fa3; --com:#8a8c90;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111315; --surface:#191c1f; --sunk:#14171a; --ink:#e8e7e3; --muted:#9da0a5; --faint:#6f7277; --line:#2b2f34;
+  --acc:#43c08a; --acc-soft:#173527; --rej:#e07b67; --rej-soft:#3a201b; --base:#71a8e8; --base-soft:#18273a;
+  --warn:#e0ad4e; --warn-soft:#3a2c12; --band:rgba(67,192,138,.14); --mark:#6b5a12; --mark-ink:#fff6cf;
+  --add:#15301f; --add-strong:#1f5133; --del:#3a1c18; --del-strong:#63302a; --hunk:#1b2230;
+  --kw:#c49bf0; --str:#e9a76a; --num:#7cc0ef; --com:#7d8086;
+  --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111315; --surface:#191c1f; --sunk:#14171a; --ink:#e8e7e3; --muted:#9da0a5; --faint:#6f7277; --line:#2b2f34;
+  --acc:#43c08a; --acc-soft:#173527; --rej:#e07b67; --rej-soft:#3a201b; --base:#71a8e8; --base-soft:#18273a;
+  --warn:#e0ad4e; --warn-soft:#3a2c12; --band:rgba(67,192,138,.14); --mark:#6b5a12; --mark-ink:#fff6cf;
+  --add:#15301f; --add-strong:#1f5133; --del:#3a1c18; --del-strong:#63302a; --hunk:#1b2230;
+  --kw:#c49bf0; --str:#e9a76a; --num:#7cc0ef; --com:#7d8086;
+  --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 "IBM Plex Sans","Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:1120px;margin:0 auto}
+code,pre,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+h1,h2,h3{text-wrap:balance;line-height:1.25;margin:0}
+h1{font-size:26px;font-weight:600;letter-spacing:-.01em}
+h2{font-size:18px;font-weight:600}
+.eyebrow{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)} .small{font-size:13px}
+a{color:var(--base)}
+header.top{padding-block:28px 12px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:13px;color:var(--muted)}
+.cmd{margin-top:10px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12.5px;overflow-x:auto;white-space:pre;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0 8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stat span{font-size:12.5px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 18px 14px;margin-top:16px;box-shadow:var(--shadow);min-width:0}
+.panel h2{margin-bottom:2px}
+.panel .sub{font-size:13px;color:var(--muted);margin:0 0 10px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+svg text{font-family:"IBM Plex Sans","Noto Sans TC",system-ui,sans-serif}
+.chartbox{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.45;padding:8px 10px;border-radius:8px;max-width:280px;z-index:5;opacity:0;transition:opacity .1s}
+.tip.on{opacity:1}
+.tip b{font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.legend i.sq{border-radius:2px;width:14px;height:8px}
+.pt{cursor:pointer}
+.node{cursor:pointer}
+nav.chips{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding-block:10px;margin-top:20px;border-bottom:1px solid var(--line);display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:3px 11px;font:500 13px/1.6 "IBM Plex Mono",monospace;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.chip .d{width:8px;height:8px;border-radius:50%}
+.chip .rc{font-size:11px;color:var(--muted)}
+.d.accepted{background:var(--acc)} .d.rejected{background:var(--rej)} .d.baseline{background:var(--base)} .d.failed{background:var(--warn)} .d.next{background:transparent;border:1.5px dashed var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-top:16px;box-shadow:var(--shadow);scroll-margin-top:64px;min-width:0}
+.card.target{outline:2px solid var(--base);outline-offset:2px}
+.card-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:14px 18px 10px;border-bottom:1px solid var(--line)}
+.card-h h3{font:600 17px/1.3 "IBM Plex Mono",monospace}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;letter-spacing:.02em}
+.pill.accepted{background:var(--acc-soft);color:var(--acc)} .pill.rejected{background:var(--rej-soft);color:var(--rej)}
+.pill.baseline{background:var(--base-soft);color:var(--base)} .pill.failed,.pill.next{background:var(--warn-soft);color:var(--warn)}
+.acc{font:600 17px/1 "IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.delta{font:500 13px "IBM Plex Mono",monospace}
+.delta.up{color:var(--acc)} .delta.down{color:var(--rej)}
+.noise{font-size:12px;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:1px 8px}
+.card-h .right{margin-left:auto;font-size:12.5px;color:var(--muted)}
+.card-b{padding:12px 18px 16px}
+.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 14px;font-size:14px}
+.kv dt{color:var(--muted);font-size:12.5px;padding-top:2px}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+@media (max-width:560px){.kv{grid-template-columns:minmax(0,1fr)} .kv dt{padding-top:6px}}
+.fb{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--sunk);border-left:3px solid var(--line);padding:4px 10px;border-radius:0 6px 6px 0}
+.fb.accepted{border-left-color:var(--acc)} .fb.rejected{border-left-color:var(--rej)} .fb.baseline{border-left-color:var(--base)}
+.tabs{display:flex;gap:2px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{flex:none;background:none;border:0;border-bottom:2px solid transparent;padding:7px 12px;font:500 13.5px "IBM Plex Sans","Noto Sans TC",sans-serif;color:var(--muted);cursor:pointer;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.tabpane{padding-top:12px;min-width:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.seg button{background:var(--surface);border:0;padding:4px 12px;font:500 12.5px "IBM Plex Sans","Noto Sans TC",sans-serif;color:var(--muted);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.diffbox{overflow-x:auto;border:1px solid var(--line);border-radius:8px;max-height:620px;overflow-y:auto}
+table.diff{border-collapse:collapse;width:100%;min-width:860px;table-layout:fixed;font:12.5px/1.5 "IBM Plex Mono",monospace}
+table.diff td{padding:0 8px;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}
+table.diff td.ln{width:44px;text-align:right;color:var(--faint);user-select:none;padding-right:6px;border-right:1px solid var(--line)}
+table.diff td.c{width:calc(50% - 44px)}
+table.diff tr.h td{background:var(--hunk);color:var(--muted);padding:3px 10px;white-space:pre}
+table.diff td.del{background:var(--del)} table.diff td.add{background:var(--add)}
+table.diff td.del .w{background:var(--del-strong);border-radius:2px} table.diff td.add .w{background:var(--add-strong);border-radius:2px}
+table.diff td.empty{background:var(--sunk)}
+table.diff thead td{position:sticky;top:0;background:var(--surface);color:var(--muted);font-size:12px;padding:5px 10px;border-bottom:1px solid var(--line);z-index:1}
+.diffstat{font-size:12.5px;color:var(--muted);margin-left:10px}
+.diffstat .a{color:var(--acc)} .diffstat .r{color:var(--rej)}
+.kw{color:var(--kw)} .st{color:var(--str)} .nu{color:var(--num)} .cm{color:var(--com);font-style:italic}
+pre.prompt{margin:0;font-size:12.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:10px 12px;max-height:460px;overflow:auto}
+pre.prompt mark{background:var(--mark);color:var(--mark-ink);border-radius:3px;box-shadow:0 0 0 2px var(--mark)}
+.chain{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.6fr);gap:12px;align-items:start}
+.chain .arrow{align-self:center;color:var(--muted);font-size:13px;text-align:center}
+@media (max-width:760px){.chain{grid-template-columns:minmax(0,1fr)} .chain .arrow{transform:rotate(90deg)}}
+.box{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--sunk);font-size:13.5px;min-width:0}
+.box .eyebrow{margin-bottom:4px}
+.losswrap{max-width:640px}
+.review{margin-top:16px;border-top:1px dashed var(--line);padding-top:12px}
+.verdicts{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
+.vbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 12px;font:500 13px "IBM Plex Sans","Noto Sans TC",sans-serif;cursor:pointer}
+.vbtn.on.agree{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
+.vbtn.on.doubt{background:var(--rej-soft);border-color:var(--rej);color:var(--rej)}
+.vbtn.on.seeds{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+textarea{width:100%;min-height:62px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:14px/1.5 "IBM Plex Sans","Noto Sans TC",sans-serif;padding:8px 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:8px;padding:5px 14px;font:500 13px "IBM Plex Sans","Noto Sans TC",sans-serif;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:default}
+.others{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:6px}
+.others li{font-size:13.5px;background:var(--sunk);border-radius:8px;padding:6px 10px;overflow-wrap:anywhere}
+.others .who{font-weight:600;margin-right:6px}
+.vtag{font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;margin-right:6px}
+.vtag.agree{background:var(--acc-soft);color:var(--acc)} .vtag.doubt{background:var(--rej-soft);color:var(--rej)} .vtag.seeds{background:var(--warn-soft);color:var(--warn)}
+.note{font-size:13px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;padding:8px 12px;margin-top:14px}
+footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Automated research loop · review</div>
+    <h1 id="ttl"></h1>
+    <div class="meta" id="meta"></div>
+    <div class="cmd mono" id="cmd"></div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>每一輪的 val acc</h2>
+      <p class="sub">滑過點看那輪改了什麼，點下去跳到那輪的卡片。綠色帶是目前最佳 ± <span class="np"></span> pt（seed 雜訊）。</p>
+      <div class="chartbox" id="chartbox"><svg id="chart" viewBox="0 0 720 330" width="100%" role="img" aria-label="val acc per iteration"></svg><div class="tip" id="tip"></div></div>
+      <div class="legend">
+        <span><i style="background:var(--base)"></i>baseline</span>
+        <span><i style="background:var(--acc)"></i>接受</span>
+        <span><i style="background:var(--rej)"></i>拒絕</span>
+        <span><i class="sq" style="background:var(--band)"></i>最佳 ± <span class="np"></span> pt</span>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>版本系譜</h2>
+      <p class="sub">每個候選是從哪一版改出來的（record.json 的 parent_iter）。上排是被接受、成為新 best 的版本。</p>
+      <div style="overflow-x:auto"><svg id="lineage" width="100%" role="img" aria-label="lineage"></svg></div>
+      <p class="sub" id="lineage-note" style="margin-top:6px"></p>
+    </section>
+  </div>
+
+  <div class="note" id="review-note"></div>
+
+  <nav class="chips" id="chips" aria-label="iterations"></nav>
+  <main id="cards"></main>
+
+  <footer>
+    頁面由 <code>scripts/build_review_page.py</code> 從 <code>runs/<span class="rn"></span>/</code> 的 log 自動產生（history.jsonl、iter_*/record.json、diff、loss_curve.json、prompt_user.txt），沒有手打的數字。
+    雜訊帶的 ± <span class="np"></span> pt 是 baseline 用 3 個 seed（42/1/2）量到的標準差；那次是在 50 epoch 設定下量的，130 epoch 尚未重量，所以只當參考。
+  </footer>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+  }
+  for (const c of kids) if (c != null) n.append(c);
+  return n;
+};
+const NS = "http://www.w3.org/2000/svg";
+const sv = (tag, attrs = {}, text) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (text != null) n.textContent = text; return n; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = v => v == null ? "—" : (v * 100).toFixed(2);
+const LABEL = {accepted:"接受", rejected:"拒絕", baseline:"baseline", failed:"失敗", next:"下一步提案"};
+const short = it => it.kind === "baseline" ? "baseline（官方原始程式）" : (it.change_summary || it.hypothesis || "").replace(/^Replaced /, "Replaced ");
+
+const iters = D.iters;
+const noise = D.noise_pts;
+document.querySelectorAll(".np").forEach(n => n.textContent = noise);
+document.querySelectorAll(".rn").forEach(n => n.textContent = D.run);
+
+/* ---------- header ---------- */
+$("#ttl").textContent = D.run;
+const base = iters.find(i => i.kind === "baseline");
+let best = base, bestAfter = [];
+for (const it of iters) { if (it.decision === "accepted" || it === base) best = it; bestAfter.push(best); }
+const nAcc = iters.filter(i => i.decision === "accepted").length;
+const nRej = iters.filter(i => i.decision === "rejected").length;
+const nFail = iters.filter(i => i.kind !== "baseline" && i.status !== "ok").length;
+const b = D.budget || {};
+$("#meta").append(
+  el("span", {text: `開始 ${String(D.created || "").replace("T", " ").slice(0, 16)}`}),
+  el("span", {text: `pretrain ${b.pretrain_epochs ?? "?"} epochs · linear eval ${b.linear_eval_epochs ?? "?"} epochs`}),
+  el("span", {text: `LLM ${iters.find(i => i.model)?.model || "?"}`}));
+$("#cmd").textContent = "python -m air.loop " + D.argv.split(" ").slice(1).join(" ");
+const stat = (v, l) => el("div", {class: "stat"}, el("b", {text: v}), el("span", {text: l}));
+$("#stats").append(
+  stat(pct(base.val_acc) + "%", "baseline val acc"),
+  stat(pct(best.val_acc) + "%", `最佳（iter ${best.iter}）`),
+  stat("+" + ((best.val_acc - base.val_acc) * 100).toFixed(2) + " pt", "比 baseline 高"),
+  stat(`${nAcc} / ${nRej} / ${nFail}`, "接受 / 拒絕 / 失敗"));
+
+/* ---------- 1+2: overview chart ---------- */
+(function chart() {
+  const svg = $("#chart"), W = 720, H = 330, L = 46, R = 20, T = 16, B = 44;
+  const n = iters.length + (D.next ? 1 : 0);
+  const X = i => L + (W - L - R) * (i + 0.5) / n;
+  const vals = iters.filter(i => i.val_acc != null).map(i => i.val_acc * 100);
+  const lo = Math.floor(base.val_acc * 100 / 2) * 2 - 4, hi = Math.ceil((Math.max(...vals) + noise) / 2) * 2 + 1;
+  const Y = v => T + (H - T - B) * (1 - (Math.max(v, lo) - lo) / (hi - lo));
+  for (let g = lo; g <= hi; g += 2) {
+    svg.append(sv("line", {x1: L, x2: W - R, y1: Y(g), y2: Y(g), stroke: "var(--line)", "stroke-width": 1}));
+    if ((g - lo) % 4 === 0) svg.append(sv("text", {x: L - 8, y: Y(g) + 4, "text-anchor": "end", "font-size": 11, fill: "var(--muted)"}, g));
+  }
+  svg.append(sv("text", {x: 12, y: T + 4, "font-size": 11, fill: "var(--muted)"}, "%"));
+  // noise band + running best (step)
+  let band = "", line = "";
+  iters.forEach((it, k) => {
+    const v = bestAfter[k].val_acc * 100, x0 = k === 0 ? X(0) : X(k) - (X(1) - X(0)) / 2, x1 = k === iters.length - 1 ? X(k) + (D.next ? (X(1) - X(0)) : 0) : X(k) + (X(1) - X(0)) / 2;
+    band += `M${x0},${Y(v + noise)}H${x1}V${Y(v - noise)}H${x0}Z`;
+    line += (k === 0 ? `M${x0},${Y(v)}` : `V${Y(v)}`) + `H${x1}`;
+  });
+  svg.append(sv("path", {d: band, fill: "var(--band)"}));
+  svg.append(sv("path", {d: line, fill: "none", stroke: "var(--acc)", "stroke-width": 1.5, "stroke-dasharray": "4 3"}));
+  svg.append(sv("text", {x: W - R, y: Y(best.val_acc * 100 + noise) - 5, "text-anchor": "end", "font-size": 11, fill: "var(--acc)"}, "目前最佳"));
+  const tip = $("#tip"), box = $("#chartbox");
+  const show = (it, cx, cy) => {
+    tip.innerHTML = `<b>iter ${it.iter}</b> · ${LABEL[it.decision] || it.decision} · <b>${pct(it.val_acc)}%</b>` +
+      (it.delta_pts != null ? ` (${it.delta_pts > 0 ? "+" : ""}${it.delta_pts} pt)` : "") + `<br>${esc(short(it)).slice(0, 220)}`;
+    const r = box.getBoundingClientRect(), s = r.width / W;
+    let x = cx * s + 12, y = cy * s - 10;
+    tip.classList.add("on");
+    if (x + tip.offsetWidth > r.width) x = cx * s - tip.offsetWidth - 12;
+    tip.style.left = Math.max(0, x) + "px"; tip.style.top = Math.max(0, y) + "px";
+  };
+  const hide = () => tip.classList.remove("on");
+  iters.forEach((it, k) => {
+    const x = X(k), v = it.val_acc == null ? lo : it.val_acc * 100, y = Y(v);
+    const color = it.decision === "accepted" ? "var(--acc)" : it.decision === "baseline" ? "var(--base)" : it.status !== "ok" ? "var(--warn)" : "var(--rej)";
+    const g = sv("g", {class: "pt", tabindex: 0, role: "link", "aria-label": `iter ${it.iter}`});
+    if (v < lo + 0.01) { // off-scale (e.g. collapse): draw an arrow at the floor
+      g.append(sv("path", {d: `M${x - 6},${y - 10}L${x + 6},${y - 10}L${x},${y - 1}Z`, fill: color}));
+      g.append(sv("text", {x, y: y - 15, "text-anchor": "middle", "font-size": 10.5, fill: color}, pct(it.val_acc)));
+    } else {
+      g.append(sv("circle", {cx: x, cy: y, r: it.decision === "accepted" ? 6 : 5, fill: color, stroke: "var(--surface)", "stroke-width": 1.5}));
+    }
+    g.append(sv("circle", {cx: x, cy: y, r: 15, fill: "transparent"}));
+    g.addEventListener("pointerenter", () => show(it, x, y));
+    g.addEventListener("pointerleave", hide);
+    g.addEventListener("focus", () => show(it, x, y)); g.addEventListener("blur", hide);
+    g.addEventListener("click", () => jump(it.iter));
+    g.addEventListener("keydown", e => { if (e.key === "Enter") jump(it.iter); });
+    svg.append(g);
+    svg.append(sv("text", {x, y: H - B + 18, "text-anchor": "middle", "font-size": 11.5, fill: "var(--muted)", "font-family": "IBM Plex Mono, monospace"}, it.iter));
+  });
+  if (D.next) {
+    const x = X(iters.length), y = Y(best.val_acc * 100);
+    const g = sv("g", {class: "pt"});
+    g.append(sv("circle", {cx: x, cy: y, r: 5.5, fill: "none", stroke: "var(--muted)", "stroke-width": 1.5, "stroke-dasharray": "2 2"}));
+    g.append(sv("circle", {cx: x, cy: y, r: 15, fill: "transparent"}));
+    g.addEventListener("pointerenter", () => { tip.innerHTML = `<b>下一步提案</b>（未執行）<br>${esc(D.next.change_summary).slice(0, 220)}`; const r = box.getBoundingClientRect(), s = r.width / W; tip.classList.add("on"); tip.style.left = Math.max(0, x * s - tip.offsetWidth - 12) + "px"; tip.style.top = (y * s) + "px"; });
+    g.addEventListener("pointerleave", hide);
+    g.addEventListener("click", () => jump("next"));
+    svg.append(g);
+    svg.append(sv("text", {x, y: H - B + 18, "text-anchor": "middle", "font-size": 11.5, fill: "var(--muted)"}, "next"));
+  }
+  svg.append(sv("text", {x: (L + W - R) / 2, y: H - 8, "text-anchor": "middle", "font-size": 11.5, fill: "var(--muted)"}, "iteration"));
+})();
+
+/* ---------- 3: lineage ---------- */
+(function lineage() {
+  const svg = $("#lineage"), step = 46, n = iters.length + (D.next ? 1 : 0), W = 30 + step * n, H = 176, top = 42, bot = 132;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.style.minWidth = "400px";
+  const X = k => 26 + step * k;
+  const onTop = it => it.decision === "accepted" || it.kind === "baseline";
+  const pos = {};
+  iters.forEach((it, k) => pos[it.iter] = [X(k), onTop(it) ? top : bot]);
+  svg.append(sv("text", {x: 4, y: H - 4, "font-size": 10.5, fill: "var(--muted)"}, "被拒的分支"));
+  const edges = sv("g"), nodes = sv("g");
+  svg.append(edges, nodes);
+  const edgeEls = {};
+  iters.forEach(it => {
+    if (it.parent_iter == null || pos[it.parent_iter] == null) return;
+    const [x0, y0] = pos[it.parent_iter], [x1, y1] = pos[it.iter];
+    const d = y0 === y1 ? `M${x0},${y0}L${x1},${y1}` : `M${x0},${y0}C${x0},${(y0 + y1) / 2 + 14} ${x1},${y0 + 10} ${x1},${y1}`;
+    const p = sv("path", {d, fill: "none", stroke: onTop(it) ? "var(--acc)" : "var(--faint)", "stroke-width": onTop(it) ? 2.5 : 1.3, opacity: onTop(it) ? 1 : .75});
+    edges.append(p); edgeEls[it.iter] = p;
+  });
+  if (D.next) {
+    const [x0, y0] = pos[best.iter], x1 = X(iters.length);
+    edges.append(sv("path", {d: `M${x0},${y0}L${x1},${top}`, fill: "none", stroke: "var(--muted)", "stroke-width": 1.3, "stroke-dasharray": "3 3"}));
+  }
+  const tip = $("#tip");
+  iters.forEach(it => {
+    const [x, y] = pos[it.iter];
+    const color = it.decision === "accepted" ? "var(--acc)" : it.kind === "baseline" ? "var(--base)" : it.status !== "ok" ? "var(--warn)" : "var(--rej)";
+    const g = sv("g", {class: "node", tabindex: 0});
+    g.append(sv("circle", {cx: x, cy: y, r: 13, fill: "var(--surface)", stroke: color, "stroke-width": 2}));
+    g.append(sv("text", {x, y: y + 4, "text-anchor": "middle", "font-size": 11.5, "font-weight": 600, fill: color, "font-family": "IBM Plex Mono, monospace"}, it.iter));
+    g.append(sv("text", {x, y: y + (onTop(it) ? -19 : 28), "text-anchor": "middle", "font-size": 10, fill: "var(--muted)", "font-family": "IBM Plex Mono, monospace"}, pct(it.val_acc)));
+    const ttl = sv("title", {}, `iter ${it.iter}（從 iter ${it.parent_iter ?? "—"} 改）: ${short(it)}`); g.append(ttl);
+    g.addEventListener("pointerenter", () => { const e = edgeEls[it.iter]; if (e) { e.setAttribute("stroke", "var(--ink)"); e.setAttribute("stroke-width", 2.5); e.setAttribute("opacity", 1); } });
+    g.addEventListener("pointerleave", () => { const e = edgeEls[it.iter]; if (e) { const t = onTop(it); e.setAttribute("stroke", t ? "var(--acc)" : "var(--faint)"); e.setAttribute("stroke-width", t ? 2.5 : 1.3); e.setAttribute("opacity", t ? 1 : .75); } });
+    g.addEventListener("click", () => jump(it.iter));
+    nodes.append(g);
+  });
+  if (D.next) {
+    const x = X(iters.length);
+    const g = sv("g", {class: "node"});
+    g.append(sv("circle", {cx: x, cy: top, r: 13, fill: "var(--surface)", stroke: "var(--muted)", "stroke-width": 1.5, "stroke-dasharray": "3 2"}));
+    g.append(sv("text", {x, y: top + 4, "text-anchor": "middle", "font-size": 9.5, fill: "var(--muted)"}, "next"));
+    g.addEventListener("click", () => jump("next"));
+    nodes.append(g);
+  }
+  // summary sentence, computed from parent_iter
+  const kids = {};
+  iters.forEach(it => { if (it.parent_iter != null) (kids[it.parent_iter] ||= []).push(it.iter); });
+  const parts = Object.entries(kids).map(([p, c]) => `iter ${p} → ${c.length > 2 ? c[0] + "–" + c[c.length - 1] : c.join("、")}`);
+  $("#lineage-note").textContent = "實際關係：" + parts.join("；") + "。";
+})();
+
+/* ---------- chips ---------- */
+const chips = $("#chips");
+iters.forEach(it => chips.append(el("a", {class: "chip", href: "#iter-" + it.iter, "data-iter": it.iter},
+  el("span", {class: "d " + (it.status !== "ok" && it.kind !== "baseline" ? "failed" : it.decision)}), String(it.iter), el("span", {class: "rc"}))));
+if (D.next) chips.append(el("a", {class: "chip", href: "#iter-next", "data-iter": "next"}, el("span", {class: "d next"}), "next", el("span", {class: "rc"})));
+
+function jump(k) {
+  const c = document.getElementById("iter-" + k); if (!c) return;
+  try { history.replaceState(null, "", "#iter-" + k); } catch (e) { location.hash = "iter-" + k; }
+  c.scrollIntoView({behavior: "smooth", block: "start"});
+  document.querySelectorAll(".card.target").forEach(x => x.classList.remove("target"));
+  c.classList.add("target"); setTimeout(() => c.classList.remove("target"), 1600);
+}
+
+/* ---------- 4: diff ---------- */
+const KW = new Set("False None True and as assert break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return self super try while with yield".split(" "));
+function hl(s) {
+  let out = "", i = 0;
+  const re = /(#.*$)|("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(\b\d+(?:\.\d+)?(?:e-?\d+)?\b)|([A-Za-z_]\w*)/gm;
+  let m;
+  while ((m = re.exec(s))) {
+    out += esc(s.slice(i, m.index));
+    if (m[1]) out += `<span class="cm">${esc(m[1])}</span>`;
+    else if (m[2]) out += `<span class="st">${esc(m[2])}</span>`;
+    else if (m[3]) out += `<span class="nu">${esc(m[3])}</span>`;
+    else out += KW.has(m[4]) ? `<span class="kw">${m[4]}</span>` : m[4];
+    i = re.lastIndex;
+  }
+  return out + esc(s.slice(i));
+}
+function wordHL(a, b) { // highlight changed middle between two paired lines
+  let p = 0; while (p < a.length && p < b.length && a[p] === b[p]) p++;
+  let s = 0; while (s < a.length - p && s < b.length - p && a[a.length - 1 - s] === b[b.length - 1 - s]) s++;
+  const f = (t) => (t.length - p - s) > 0 && (p + s) > 4 ? hl(t.slice(0, p)) + `<span class="w">${hl(t.slice(p, t.length - s))}</span>` + hl(t.slice(t.length - s)) : hl(t);
+  return [f(a), f(b)];
+}
+function parseDiff(txt) {
+  const lines = txt.split("\n"), rows = []; let oldName = "", newName = "", a = 0, b = 0, adds = 0, dels = 0, buf = [];
+  const flush = () => {
+    const ds = buf.filter(x => x[0] === "-"), as = buf.filter(x => x[0] === "+");
+    for (let i = 0; i < Math.max(ds.length, as.length); i++) {
+      const L = ds[i] ? ds[i][1] : null, R = as[i] ? as[i][1] : null;
+      const [lh, rh] = L != null && R != null ? wordHL(L, R) : [L != null ? hl(L) : "", R != null ? hl(R) : ""];
+      rows.push({t: "c", la: L != null ? ++a : "", lh, lk: L != null ? "del" : "empty", rb: R != null ? ++b : "", rh, rk: R != null ? "add" : "empty"});
+    }
+    buf = [];
+  };
+  for (const ln of lines) {
+    if (ln.startsWith("--- ")) { oldName = ln.slice(4); continue; }
+    if (ln.startsWith("+++ ")) { newName = ln.slice(4); continue; }
+    const h = ln.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)/);
+    if (h) { flush(); a = +h[1] - 1; b = +h[2] - 1; rows.push({t: "h", text: ln}); continue; }
+    if (ln[0] === "-") { buf.push(["-", ln.slice(1)]); dels++; continue; }
+    if (ln[0] === "+") { buf.push(["+", ln.slice(1)]); adds++; continue; }
+    if (ln[0] === " " || ln === "") { flush(); if (ln === "" ) continue; const t = hl(ln.slice(1)); rows.push({t: "c", la: ++a, lh: t, lk: "", rb: ++b, rh: t, rk: ""}); continue; }
+    if (ln.startsWith("\\")) continue;
+  }
+  flush();
+  return {oldName, newName, rows, adds, dels};
+}
+function renderDiff(txt) {
+  if (!txt.trim()) return el("p", {class: "muted small", text: "這輪沒有程式差異（和比較對象相同）。"});
+  const d = parseDiff(txt);
+  const t = document.createElement("table"); t.className = "diff";
+  let h = `<thead><tr><td class="ln"></td><td class="c">${esc(d.oldName)}</td><td class="ln"></td><td class="c">${esc(d.newName)}</td></tr></thead><tbody>`;
+  for (const r of d.rows) h += r.t === "h" ? `<tr class="h"><td colspan="4">${esc(r.text)}</td></tr>`
+    : `<tr><td class="ln">${r.la}</td><td class="c ${r.lk}">${r.lh}</td><td class="ln">${r.rb}</td><td class="c ${r.rk}">${r.rh}</td></tr>`;
+  t.innerHTML = h + "</tbody>";
+  const wrap = el("div");
+  wrap.append(el("div", {class: "diffbox"}, t));
+  wrap.dataset.stat = `<span class="a">+${d.adds}</span> <span class="r">−${d.dels}</span> 行`;
+  return wrap;
+}
+function diffPane(it) {
+  const pane = el("div");
+  const isBase = it.kind === "baseline";
+  if (isBase) { pane.append(el("p", {class: "muted small", text: "baseline 是官方原始程式，沒有 diff。"})); return pane; }
+  const seg = el("div", {class: "seg"}), stat = el("span", {class: "diffstat"}), body = el("div");
+  const parentLbl = it.iter === "next" ? `對目前 best（iter ${best.iter}）` : `對當時的 best（iter ${it.parent_iter}）`;
+  const opts = [["best", parentLbl, it.diff_best], ["base", "對 baseline", it.diff_base]];
+  const pick = k => {
+    seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.k === k));
+    body.replaceChildren(); const r = renderDiff(opts.find(o => o[0] === k)[2]); body.append(r); stat.innerHTML = r.dataset.stat || "";
+  };
+  for (const [k, l] of opts) seg.append(el("button", {"data-k": k, text: l, onclick: () => pick(k)}));
+  pane.append(el("div", {}, seg, stat), body);
+  pick("best");
+  return pane;
+}
+
+/* ---------- 6: loss ---------- */
+function lossPane(it) {
+  const pts = it.loss || [];
+  if (pts.length < 2) return el("p", {class: "muted small", text: "沒有 loss 紀錄。"});
+  const W = 600, H = 220, L = 52, R = 14, T = 12, B = 34;
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const useLog = y1 / Math.max(y0, 1e-9) > 50 && y0 > 0;
+  const f = v => useLog ? Math.log10(v) : v, fy0 = f(y0), fy1 = f(y1) + (f(y1) - f(y0)) * 0.04 || 1;
+  const X = v => L + (W - L - R) * (v - x0) / ((x1 - x0) || 1), Y = v => T + (H - T - B) * (1 - (f(v) - fy0) / ((fy1 - fy0) || 1));
+  const svg = sv("svg", {viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": `loss curve iter ${it.iter}`});
+  const ticks = useLog ? [] : [y0, (y0 + y1) / 2, y1];
+  if (useLog) for (let e = Math.floor(fy0); e <= Math.ceil(f(y1)); e++) ticks.push(10 ** e);
+  for (const t of ticks) {
+    if (f(t) < fy0 - 1e-9 || f(t) > fy1 + 1e-9) continue;
+    svg.append(sv("line", {x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: "var(--line)"}));
+    svg.append(sv("text", {x: L - 6, y: Y(t) + 4, "text-anchor": "end", "font-size": 10.5, fill: "var(--muted)", "font-family": "IBM Plex Mono, monospace"}, t >= 100 ? t.toFixed(0) : t >= 1 ? t.toFixed(2) : t.toPrecision(2)));
+  }
+  for (const e of [x0, Math.round((x0 + x1) / 2), x1]) svg.append(sv("text", {x: X(e), y: H - B + 16, "text-anchor": "middle", "font-size": 10.5, fill: "var(--muted)", "font-family": "IBM Plex Mono, monospace"}, e));
+  svg.append(sv("text", {x: (L + W - R) / 2, y: H - 4, "text-anchor": "middle", "font-size": 11, fill: "var(--muted)"}, "pretrain epoch" + (useLog ? " · y 軸為 log" : "")));
+  const color = it.decision === "accepted" ? "var(--acc)" : it.kind === "baseline" ? "var(--base)" : "var(--rej)";
+  svg.append(sv("path", {d: pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join(""), fill: "none", stroke: color, "stroke-width": 1.8}));
+  const first = pts[0], last = pts[pts.length - 1];
+  const cap = el("p", {class: "muted small", text: `第 ${first[0]} epoch loss ${first[1].toFixed(3)} → 第 ${last[0]} epoch ${last[1].toFixed(4)}。不同 loss 公式的數值不能直接互比，看形狀（有沒有降、有沒有爆）就好。`});
+  return el("div", {class: "losswrap"}, svg, cap);
+}
+
+/* ---------- 8: feedback chain ---------- */
+function chainPane(it) {
+  const pane = el("div");
+  if (it.fed_into == null) { pane.append(el("p", {class: "muted small", text: "這是最後一輪，後面沒有 prompt。"})); return pane; }
+  const target = it.fed_into === "next" ? "下一步提案" : `iter ${it.fed_into}`;
+  const left = el("div", {class: "box"}, el("div", {class: "eyebrow", text: `iter ${it.iter} 程式寫下的回饋`}), el("div", {class: "mono small", text: it.feedback}));
+  const pre = el("pre", {class: "prompt"});
+  const s = it.fed_section;
+  if (it.fed_start >= 0) {
+    pre.innerHTML = esc(s.slice(0, it.fed_start)) + "<mark>" + esc(s.slice(it.fed_start, it.fed_end)) + "</mark>" + esc(s.slice(it.fed_end));
+  } else pre.textContent = s || "（找不到 history 段落）";
+  const right = el("div", {class: "box"}, el("div", {class: "eyebrow", text: `${target} 的 prompt_user.txt · History 段`}), pre);
+  pane.append(el("div", {class: "chain"}, left, el("div", {class: "arrow", text: "原文貼進 →"}), right));
+  pane.append(el("p", {class: "muted small", style: "margin-top:8px", text: "黃色那段是 loop 程式把這輪的結果與回饋，一字不改寫進下一輪給 Gemini 的 prompt；Gemini 下一輪的提案就是看著這段歷史寫的。"}));
+  requestAnimationFrame(() => { const m = pre.querySelector("mark"); if (m) pre.scrollTop = Math.max(0, m.offsetTop - pre.offsetTop - 40); });
+  return pane;
+}
+function promptPane(it) {
+  if (!it.prompt_user) return el("p", {class: "muted small", text: "baseline 沒有呼叫 Gemini。"});
+  return el("div", {}, el("p", {class: "muted small", text: "這輪 Gemini 實際收到的 user prompt（system prompt 在 iter 資料夾的 prompt_system.txt）。"}), el("pre", {class: "prompt", text: it.prompt_user}));
+}
+
+/* ---------- cards ---------- */
+const main = $("#cards");
+const cardEls = {};
+function card(it) {
+  const k = it.iter, dec = it.iter === "next" ? "next" : (it.status !== "ok" && it.kind !== "baseline" ? "failed" : it.decision);
+  const c = el("section", {class: "card", id: "iter-" + k});
+  const h = el("div", {class: "card-h"}, el("h3", {text: k === "next" ? "下一步提案" : `iter ${k}`}), el("span", {class: "pill " + dec, text: LABEL[dec] || dec}));
+  if (it.val_acc != null) h.append(el("span", {class: "acc", text: pct(it.val_acc) + "%"}));
+  if (it.delta_pts != null) {
+    h.append(el("span", {class: "delta " + (it.delta_pts > 0 ? "up" : "down"), text: `${it.delta_pts > 0 ? "+" : ""}${it.delta_pts} pt vs best`}));
+    if (Math.abs(it.delta_pts) <= noise && it.status === "ok") h.append(el("span", {class: "noise", title: `差距在 ± ${noise} pt 的 seed 雜訊內`, text: "在雜訊內"}));
+  }
+  const right = k === "next" ? "未執行（只產生提案）" : [it.parent_iter != null ? `從 iter ${it.parent_iter} 改` : null, it.seconds ? `${(it.seconds / 60).toFixed(1)} 分鐘` : null, it.time ? it.time.slice(5, 16).replace("T", " ") : null].filter(Boolean).join(" · ");
+  h.append(el("span", {class: "right", text: right}));
+  c.append(h);
+  const body = el("div", {class: "card-b"});
+  const kv = el("dl", {class: "kv"});
+  const row = (t, v, cls) => { if (v) kv.append(el("dt", {text: t}), el("dd", {class: cls || "", text: v})); };
+  row("改了什麼", it.change_summary && it.change_summary !== "none" ? it.change_summary : (it.kind === "baseline" ? "沒改（官方原始 Barlow Twins）" : ""));
+  row("假設", it.kind === "baseline" ? "" : it.hypothesis);
+  row("理由", it.rationale);
+  row("預期效果", it.expected_effect);
+  if (it.static_problems && it.static_problems.length) row("靜態檢查", it.static_problems.join("；"));
+  if (it.feedback) { kv.append(el("dt", {text: "程式判定"}), el("dd", {}, el("div", {class: "fb " + dec, text: it.feedback}))); }
+  body.append(kv);
+  const tabsDef = [["diff", "程式差異", diffPane], ["loss", "Loss 曲線", lossPane], ["chain", "回饋鏈", chainPane], ["prompt", "Gemini 看到的 prompt", promptPane]]
+    .filter(([id]) => !(k === "next" && (id === "loss" || id === "chain")) && !(it.kind === "baseline" && (id === "diff" || id === "prompt")));
+  const tabs = el("div", {class: "tabs", role: "tablist"}), pane = el("div", {class: "tabpane"});
+  const cache = {};
+  const sel = id => {
+    tabs.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.id === id));
+    pane.replaceChildren(cache[id] ||= tabsDef.find(t => t[0] === id)[2](it));
+  };
+  for (const [id, l] of tabsDef) tabs.append(el("button", {class: "tab", role: "tab", "data-id": id, text: l, onclick: () => sel(id)}));
+  body.append(tabs, pane);
+  sel(tabsDef[0][0]);
+  const rv = el("div", {class: "review", hidden: ""}); body.append(rv);
+  c.append(body);
+  cardEls[k] = {card: c, review: rv, it};
+  return c;
+}
+iters.forEach(it => main.append(card(it)));
+if (D.next) main.append(card({...D.next, iter: "next", kind: "next", decision: "next", parent_iter: best.iter}));
+if (location.hash.startsWith("#iter-")) setTimeout(() => jump(location.hash.slice(6)), 50);
+
+/* ---------- 11: review (only inside a claude.ai Artifact with db + user) ---------- */
+const VERD = {agree: "同意", doubt: "懷疑", seeds: "要多跑 seed"};
+const note = $("#review-note");
+note.textContent = "Review 區：正在連線…";
+(async function review() {
+  let db = null, user = null;
+  try { [db, user] = await Promise.all([window.claude?.use?.("db") ?? null, window.claude?.use?.("user") ?? null]); } catch (e) {}
+  if (!db || !user) {
+    note.textContent = "這份是離線版。每輪卡片下的 Review 區（同意 / 懷疑 / 要多跑 seed + 留言）只在 claude.ai 分享連結的版本出現。";
+    return;
+  }
+  const me = await user.id();
+  let all = {}; // uid -> {items:{iter:{verdict,note,at}}}
+  let mine = {items: {}};
+  let writing = Promise.resolve();
+  const canWrite = me != null;
+  note.textContent = canWrite ? "每輪卡片最下面可以留下你的判斷，所有看這頁的人都看得到。" : "你目前只能看別人的 review（需要登入且有互動權限才能留言）。";
+  const loading = setTimeout(() => { note.textContent = "Review 資料讀取逾時，重新整理頁面再試一次。"; }, 10000);
+
+  const forms = {};
+  for (const [k, {review: rv}] of Object.entries(cardEls)) {
+    rv.hidden = false;
+    rv.append(el("div", {class: "eyebrow", text: "Review"}));
+    const f = {verdict: null};
+    if (canWrite) {
+      const vs = el("div", {class: "verdicts"});
+      for (const [v, l] of Object.entries(VERD)) vs.append(el("button", {class: "vbtn " + v, "data-v": v, text: l, onclick: () => { f.verdict = f.verdict === v ? null : v; paintBtns(); save.disabled = false; }}));
+      const ta = el("textarea", {placeholder: "理由或想追問的地方（選填）", maxlength: "2000"});
+      ta.addEventListener("input", () => save.disabled = false);
+      const status = el("span", {class: "muted small"});
+      const save = el("button", {class: "btn", text: "儲存", disabled: ""});
+      const paintBtns = () => vs.querySelectorAll(".vbtn").forEach(b => b.classList.toggle("on", b.dataset.v === f.verdict));
+      save.addEventListener("click", () => {
+        const entry = {verdict: f.verdict, note: ta.value.trim().slice(0, 2000), at: new Date().toISOString()};
+        const items = {...mine.items};
+        if (!entry.verdict && !entry.note) delete items[k]; else items[k] = entry;
+        save.disabled = true; status.textContent = "儲存中…";
+        writing = writing.then(() => db.doc("reviews/" + me).set({items, updatedAt: entry.at}))
+          .then(() => { mine = {items}; status.textContent = "已儲存"; })
+          .catch(e => { save.disabled = false; status.textContent = e?.code === "permission_denied" || e?.code === "not_granted" ? "你沒有寫入權限" : "沒存成功，再按一次"; });
+      });
+      rv.append(vs, ta, el("div", {class: "row"}, save, status));
+      Object.assign(f, {ta, paintBtns, status});
+    }
+    const list = el("ul", {class: "others"}); rv.append(list); f.list = list;
+    forms[k] = f;
+  }
+
+  let firstSnap = true;
+  async function paint() {
+    const ids = Object.keys(all);
+    const ps = ids.length ? await user.profiles(ids) : {};
+    const counts = {};
+    for (const [k, f] of Object.entries(forms)) {
+      const entries = ids.map(uid => [uid, all[uid]?.items?.[k]]).filter(([, e]) => e && (e.verdict || e.note))
+        .sort((a, b) => String(a[1].at).localeCompare(String(b[1].at)));
+      counts[k] = entries.length;
+      f.list.replaceChildren(...entries.map(([uid, e]) => {
+        const li = el("li");
+        li.append(el("span", {class: "who", text: (ps[uid]?.name || "某位 reviewer") + (uid === me ? "（你）" : "")}));
+        if (e.verdict && VERD[e.verdict]) li.append(el("span", {class: "vtag " + e.verdict, text: VERD[e.verdict]}));
+        if (e.note) li.append(document.createTextNode(e.note));
+        li.append(el("span", {class: "muted small", text: "  " + String(e.at || "").slice(0, 16).replace("T", " ")}));
+        return li;
+      }));
+      if (firstSnap && f.ta) { const m = mine.items[k]; if (m) { f.verdict = m.verdict || null; f.ta.value = m.note || ""; f.paintBtns(); } }
+    }
+    document.querySelectorAll(".chip").forEach(ch => { const n = counts[ch.dataset.iter]; ch.querySelector(".rc").textContent = n ? `💬${n}` : ""; });
+    firstSnap = false;
+  }
+  db.collection("reviews").onSnapshot(snap => {
+    clearTimeout(loading);
+    all = {};
+    for (const d of snap.docs) { const v = d.data(); if (v && typeof v.items === "object" && v.items) all[d.id] = v; }
+    if (me && all[me] && firstSnap) mine = {items: {...all[me].items}};
+    paint();
+  }, () => { clearTimeout(loading); note.textContent = "Review 資料暫時讀不到，重新整理頁面再試一次。"; });
+})();
+</script>

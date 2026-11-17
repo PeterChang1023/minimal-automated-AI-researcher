@@ -61,6 +61,7 @@ best **57.73 %** (iter 10) after 10 real `gemini-3.5-flash` proposals (3 accepte
 validation split, seed 42. Details, per-iteration table and the honest reading are in
 [§4c](#4c-main-result-full-budget-loop-runsflash35-e130-10iter-hinton-2026-11-14).
 Click-through trace: [`runs/flash35-e130-10iter/viz/trace.html`](runs/flash35-e130-10iter/viz/trace.html).
+Review page (interactive chart, ±1.2 pt seed-noise band, lineage graph, side-by-side diffs, loss curves, feedback chain): [open in browser](https://htmlpreview.github.io/?https://github.com/PeterChang1023/minimal-automated-AI-researcher/blob/main/runs/flash35-e130-10iter/viz/review.html) · [source](runs/flash35-e130-10iter/viz/review.html), built by `python scripts/build_review_page.py runs/flash35-e130-10iter`.
 
 Before that, a shortened **50-epoch pilot run** (`runs/flash35-clean`, [§4a](#4a-50-epoch-pilot-run-runsflash35-clean-hinton-2026-11-14))
 went 26.75 % → 54.19 %; its best code, re-run at 130 epochs, reaches 59.45 % (vs 47.04 %). That code combines three
@@ -173,7 +174,7 @@ runs/<run>/
                            algorithm.py, diff_vs_best.patch, diff_vs_baseline.patch,
                            smoke.log, stdout.log, effective_config.json, val_info.json, record.json
   next_proposal/           the proposal made from all feedback, not executed
-  viz/                     progress.png, trace.html
+  viz/                     progress.png, trace.html, review.html
 ```
 
 ## 4. Results
