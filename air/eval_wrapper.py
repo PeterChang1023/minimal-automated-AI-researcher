@@ -113,10 +113,21 @@ def main():
 
     install_loss_logger(official)
 
+    mem_gb = budget.get("gpu_mem_gb")  # None = no cap (old runs); set by --gpu-mem-gb
+    import torch
+    if mem_gb and torch.cuda.is_available():
+        total = torch.cuda.get_device_properties(0).total_memory
+        frac = min(1.0, mem_gb * 1024**3 / total)
+        torch.cuda.set_per_process_memory_fraction(frac, 0)
+        print(f"[harness] GPU memory cap: {mem_gb} GB ({frac:.2%} of the device); exceeding it raises "
+              f"CUDA OOM in this process only", flush=True)
+
     sys.argv = ["train_eval_baseline.py", "--split", args.split]
     t0 = time.time()
     official.main()
     print(f"[harness] official evaluation wall time: {time.time() - t0:.1f}s", flush=True)
+    if torch.cuda.is_available():
+        print(f"[harness] peak GPU memory allocated: {torch.cuda.max_memory_allocated() / 1024**3:.1f} GB", flush=True)
 
 
 if __name__ == "__main__":

@@ -79,6 +79,8 @@ class Run:
             "max_bs": args.max_batch_size,
             "timeout_min": round(args.timeout_min, 1),
         }
+        if args.gpu_mem_gb:
+            self.budget["gpu_mem_gb"] = args.gpu_mem_gb
         # keys forced onto the candidate's get_training_config() by eval_wrapper.py
         self.budget["config_overrides"] = {
             "pretrain_epochs": args.pretrain_epochs,
@@ -334,6 +336,8 @@ def parse_args(argv=None):
     p.add_argument("--pretrain-epochs", type=int, default=50, help="fixed shortened budget (upstream: 130)")
     p.add_argument("--max-batch-size", type=int, default=512, help="cap for the shared GPU")
     p.add_argument("--timeout-min", type=float, default=40.0)
+    p.add_argument("--gpu-mem-gb", type=float, default=0,
+                   help="per-process GPU memory cap for each experiment on the shared GPU (0 = no cap)")
     p.add_argument("--data-root", default=f"/cache/{user}/air/data", help="contains cifar-100-python/")
     p.add_argument("--work-root", default=f"/cache/{user}/air/work", help="sandboxes + checkpoints")
     p.add_argument("--keep-ckpt", action="store_true")

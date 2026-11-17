@@ -198,6 +198,9 @@ def time_summary(history: list[dict], timeout_min: float) -> str:
 
 def build_explore_prompt(budget: dict, best: dict, history: list[dict], baseline_acc) -> str:
     task = TASK.format(**budget)
+    if budget.get("gpu_mem_gb"):
+        task += (f"- GPU memory cap (shared GPU): {budget['gpu_mem_gb']:g} GB per experiment; exceeding it "
+                 f"crashes the run with CUDA OOM and counts as a failure.\n")
     base_s = f"{baseline_acc:.4f}" if baseline_acc is not None else "not yet measured"
     plateau, ids = plateau_status(history, best["val_acc"])
     n_struct = sum(1 for h in history if h.get("change_type") == "structural")
