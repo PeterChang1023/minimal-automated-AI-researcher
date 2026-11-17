@@ -131,13 +131,21 @@ button.link{background:none;border:0;padding:0;color:var(--base);font:inherit;fo
 .card-h{cursor:pointer}
 .card:not(.open) .card-h{border-bottom:0}
 .card-peek{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 18px 12px}
-.card.open .card-peek{padding-top:10px;border-bottom:1px solid var(--line)}
+.card.open .card-peek{border-bottom:1px solid var(--line)}
+.card.open .verdict-line{padding-top:10px}
+.verdict-line+.card-peek{padding-top:0}
+.card.open .card-peek:not(.verdict-line+.card-peek){padding-top:10px}
 .chip.all{margin-left:auto;font-family:"IBM Plex Sans","Noto Sans TC",sans-serif}
 .howto{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 4px;padding:0;list-style:none;counter-reset:s}
 .howto li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 42px;position:relative;font-size:13.5px;line-height:1.55;counter-increment:s}
 .howto li::before{content:counter(s);position:absolute;left:12px;top:10px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);font:600 12px/20px "IBM Plex Mono",monospace;text-align:center}
 .howto b{display:block;font-size:14px}
 @media (max-width:760px){.howto{grid-template-columns:minmax(0,1fr)}}
+.verdict-line{display:flex;gap:10px;align-items:baseline;padding:0 18px 10px;font-size:14.5px;line-height:1.55}
+.vn-tag{flex:none;font-size:11px;font-weight:600;letter-spacing:.04em;border-radius:5px;padding:1px 7px;background:var(--base-soft);color:var(--base);cursor:help}
+.vn-cell{font-family:"IBM Plex Sans","Noto Sans TC",sans-serif;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.5}
+table.ov td.kc-cell{max-width:none;min-width:320px}
+table.ov th{white-space:nowrap} table.ov .pill,table.ov .ck-sum{white-space:nowrap}
 .fb{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--sunk);border-left:3px solid var(--line);padding:4px 10px;border-radius:0 6px 6px 0}
 .fb.accepted{border-left-color:var(--acc)} .fb.rejected{border-left-color:var(--rej)} .fb.baseline{border-left-color:var(--base)}
 .tabs{display:flex;gap:2px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
@@ -216,7 +224,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
       </div>
     </div>
     <div class="ov-wrap"><table class="ov">
-      <thead><tr><th>iter</th><th>關鍵改動</th><th class="num">val acc</th><th>判定</th><th>自動檢查</th><th class="num">同意</th><th class="num">懷疑</th><th class="num">多跑 seed</th><th class="num">行內留言<br><span class="muted">未解決/全部</span></th></tr></thead>
+      <thead><tr><th>iter</th><th>關鍵改動 · 結論</th><th class="num">val acc</th><th>判定</th><th>自動檢查</th><th class="num">同意</th><th class="num">懷疑</th><th class="num">多跑 seed</th><th class="num">未解決留言</th></tr></thead>
       <tbody id="ov-body"></tbody>
     </table></div>
   </section>
@@ -246,7 +254,7 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
   <main id="cards"></main>
 
   <footer>
-    頁面由 <code>scripts/build_review_page.py</code> 從 <code>runs/<span class="rn"></span>/</code> 的 log 自動產生（history.jsonl、iter_*/record.json、diff、loss_curve.json、prompt_user.txt），沒有手打的數字。
+    頁面由 <code>scripts/build_review_page.py</code> 從 <code>runs/<span class="rn"></span>/</code> 的 log 自動產生（history.jsonl、iter_*/record.json、diff、loss_curve.json、prompt_user.txt），沒有手打的數字。標著「結論」的那一句例外：那是根據 log 人工整理的解讀（<code>review_notes.json</code>），方便第一次看的人抓重點。
     雜訊帶的 ± <span class="np"></span> pt 是 baseline 用 3 個 seed（42/1/2）量到的標準差；那次是在 50 epoch 設定下量的，130 epoch 尚未重量，所以只當參考。
   </footer>
 </div>
@@ -625,6 +633,7 @@ function card(it) {
   const tog = el("button", {class: "tog", "aria-expanded": "false", title: "展開 / 收合"}, el("span", {class: "car", text: "▸"}), el("span", {class: "tl", text: "展開"}));
   h.prepend(tog);
   c.append(h);
+  if (it.verdict_note) c.append(el("div", {class: "verdict-line"}, el("span", {class: "vn-tag", title: "根據這輪的 log 人工整理，不是 loop 程式產生的", text: "結論"}), el("span", {text: it.verdict_note})));
   const peek = el("div", {class: "card-peek"});
   if (it.key_changes && it.key_changes.length) peek.append(keyChips(it.key_changes));
   else if (it.kind === "baseline") peek.append(el("span", {class: "muted small", text: "官方原始 Barlow Twins 程式，沒有改動"}));
@@ -846,12 +855,12 @@ function paintOverview() {
     const num = (n, cls) => el("td", {class: "num" + (n ? " " + cls : "")}, RV.on ? String(n) : "—");
     const tr = el("tr", {tabindex: 0, onclick: () => jump(k), onkeydown: e => { if (e.key === "Enter") jump(k); }},
       el("td", {class: "mono"}, k),
-      el("td", {class: "kc-cell", text: keyText(it) || (it.kind === "baseline" ? "官方原始程式" : "")}),
+      el("td", {class: "kc-cell"}, el("div", {text: keyText(it) || (it.kind === "baseline" ? "官方原始程式" : "")}), it.verdict_note ? el("div", {class: "vn-cell", title: it.verdict_note, text: (it.verdict_note.match(/^.*?。/) || [it.verdict_note])[0]}) : null),
       el("td", {class: "num mono", text: it.val_acc != null ? pct(it.val_acc) : "—"}),
       el("td", {}, el("span", {class: "pill " + dec, text: LABEL[dec] || dec})),
       el("td", {}, el("span", {class: "ck-sum " + (sm.fail ? "fail" : sm.warn ? "warn" : "ok"), text: sm.fail ? `✗ ${sm.fail}` : sm.warn ? `! ${sm.warn}` : `✓ ${sm.pass}/${sm.total}`})),
       num(vs.agree, "agree"), num(vs.doubt, "doubt"), num(vs.seeds, "seeds"),
-      el("td", {class: "num" + (open ? " doubt" : "")}, RV.on ? (th.length ? `${open} / ${th.length}` : "0") : "—"));
+      el("td", {class: "num" + (open ? " doubt" : "")}, RV.on ? (th.length ? `${open} / ${th.length} 則` : "0") : "—"));
     tb.append(tr);
   }
   if (!shown) tb.append(el("tr", {}, el("td", {colspan: "9", class: "muted small", text: "沒有符合篩選的輪次。"})));

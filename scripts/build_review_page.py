@@ -9,6 +9,7 @@ What the page shows, all read from history.jsonl and iter_*/ (nothing typed by h
   2. noise band       - +/- one seed standard deviation around the running best
   3. lineage graph    - which version each candidate was built from (record.json parent_iter)
   4. code diff        - side-by-side, toggle "vs parent (best at the time)" / "vs baseline"
+  -  one-line verdicts (optional runs/<run>/review_notes.json, written by hand from the logs; labelled as such)
   6. loss curve       - pretraining loss per epoch, per iteration
   8. feedback chain   - where iteration k's program-written feedback appears in iteration k+1's prompt
  11. review panel     - per-iteration verdicts and notes; only active when the page is opened as a
@@ -357,6 +358,12 @@ def collect(run_dir: Path, noise_pts: float):
         sec, s, e = history_block(nxt_prompt, it["iter"])
         it["fed_into"] = (it["iter"] + 1) if it["iter"] + 1 in by_k else ("next" if nxt else None)
         it["fed_section"], it["fed_start"], it["fed_end"] = sec, s, e
+    # optional hand-written one-line verdicts (runs/<run>/review_notes.json), shown separately from log data
+    notes = json.loads(read(run_dir / "review_notes.json") or "{}")
+    for it in iters:
+        it["verdict_note"] = notes.get(str(it["iter"]), "")
+    if nxt:
+        nxt["verdict_note"] = notes.get("next", "")
     budget = cfg.get("budget") or (cfg.get("fingerprint") or {}).get("budget", {})
     return {
         "run": run_dir.name,
