@@ -8,6 +8,34 @@
 > - Source: [`docs/index.html`](docs/index.html) (same file as [`runs/flash35-e130-10iter/viz/review.html`](runs/flash35-e130-10iter/viz/review.html)); rebuild with
 >   `python scripts/build_review_page.py runs/flash35-e130-10iter --out docs/index.html`
 
+## The project in 7 slides
+
+<details open>
+<summary>Click to collapse · <a href="docs/slides/key_slides_en.pptx">download as .pptx</a></summary>
+
+**1. Workflow ① — train the encoder without labels**
+![Workflow 1: how the encoder is trained](docs/slides/01_train_encoder.png)
+
+**2. Workflow ② — score the encoder with a linear probe**
+![Workflow 2: testing the encoder](docs/slides/02_test_encoder.png)
+
+**3. Barlow Twins vs InfoNCE — the loss swap behind the biggest gain**
+![Barlow Twins vs InfoNCE](docs/slides/03_barlow_vs_infonce.png)
+
+**4. Gemini is the brain, the program is its hands**
+![Gemini is the brain; the program is its hands](docs/slides/04_brain_and_hands.png)
+
+**5. The research loop — the LLM proposes, the program checks the rest**
+![The research loop](docs/slides/05_research_loop.png)
+
+**6. What Gemini may and may not change**
+![Gemini input / output and what it may change](docs/slides/06_what_gemini_may_change.png)
+
+**7. Results — 47.27% → 57.73% in 10 rounds**
+![Results per round](docs/slides/07_results.png)
+
+</details>
+
 ## How it works in one minute
 
 **Goal.** Learn a good image encoder **without labels** (self-supervised learning on CIFAR-100),
