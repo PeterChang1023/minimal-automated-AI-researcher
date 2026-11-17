@@ -48,20 +48,23 @@ the accept/reject decision, the feedback text) is deterministic program code.
 |---|---|
 | Benchmark | [FML-bench](https://github.com/qrzou/FML-bench) @ `d336651`, task files vendored in [`fmlbench_task/`](fmlbench_task/UPSTREAM.md) (byte-identical, SHA-256 pinned) |
 | Metric | `linear_eval_acc_mean` on the validation split, higher is better. Upstream full-budget (130 epochs) val = **47.77 %** |
-| Our budget | **50 pretrain epochs** (shortened from 130), everything else as upstream. Change with `--pretrain-epochs` (it starts a new, separately comparable run) |
+| Our budget | **130 pretrain epochs** (same as upstream) for the main result, everything else as upstream. A shortened 50-epoch pilot run is kept in §4a. Change with `--pretrain-epochs` (it starts a new, separately comparable run) |
 | LLM | Gemini via Google AI Studio REST (`GEMINI_API_KEY`), default model `gemini-3.1-pro-preview` (`--model`/`GEMINI_MODEL`). Pluggable: `--backend gemini-cli` (Google `gemini` CLI logged in with a Google account, uses the subscription quota), `claude-cli`, `file`, `mock` |
 | Libraries | PyTorch 2.1.0 (cu121), torchvision 0.16.0, NumPy 1.26.4, Pillow, matplotlib. Python stdlib only for the loop / LLM client (no SDK, no RAG) |
 
-## Result at a glance (`runs/flash35-clean`, 5 Gemini iterations)
+## Result at a glance (`runs/flash35-e130-10iter`, 130 epochs, 10 Gemini iterations) — main result
 
-![flash35-clean progress: baseline 26.75% -> best 54.19% at iter 4](runs/flash35-clean/viz/progress.png)
+![flash35-e130-10iter progress: baseline 47.27% -> best 57.73% at iter 10](runs/flash35-e130-10iter/viz/progress.png)
 
-Baseline 26.75 % → best **54.19 %** (iter 4) after 5 real `gemini-3.5-flash` proposals (3 accepted,
-2 rejected, 0 failures), 50 pretrain epochs, validation split. Details in [§4a](#4a-clean-run-runsflash35-clean-hinton-2026-11-14--main-result).
-At the full upstream budget (130 pretrain epochs) the same iter-4 code reaches **59.45 %** vs **47.04 %** for the
-unmodified baseline (single seed each; see [§4a](#4a-clean-run-runsflash35-clean-hinton-2026-11-14--main-result)).
-A second loop run directly at 130 epochs with 10 iterations reached 57.73 % (baseline 47.27 %), below that 59.45 %;
-see [§4c](#4c-second-loop-run-at-the-full-budget-runsflash35-e130-10iter-hinton-2026-11-14) for why.
+At the full upstream budget (**130 pretrain epochs** every iteration), baseline **47.27 %** (upstream 47.77 %) →
+best **57.73 %** (iter 10) after 10 real `gemini-3.5-flash` proposals (3 accepted, 7 rejected, 0 failures),
+validation split, seed 42. Details, per-iteration table and the honest reading are in
+[§4c](#4c-main-result-full-budget-loop-runsflash35-e130-10iter-hinton-2026-11-14).
+Click-through trace: [`runs/flash35-e130-10iter/viz/trace.html`](runs/flash35-e130-10iter/viz/trace.html).
+
+Before that, a shortened **50-epoch pilot run** (`runs/flash35-clean`, [§4a](#4a-50-epoch-pilot-run-runsflash35-clean-hinton-2026-11-14))
+went 26.75 % → 54.19 %; its best code, re-run at 130 epochs, reaches 59.45 % (vs 47.04 %). That code combines three
+changes the 130-epoch run rejected one at a time, which is the main limitation discussed in §4c.
 The first run (`runs/main`, whose iterations 1–4 were LLM-setup failures) is kept unchanged in [§4b](#4b-first-run-runsmain-hinton-2026-11-13).
 
 ## 1. Setup on hinton
@@ -97,7 +100,11 @@ dies, re-run the same line and it continues from `runs/<name>/history.jsonl`.
 # Part 1 – baseline only, shortened budget
 python -m air.loop --run-name main --baseline-only
 
-# Part 2 – clean 5-iteration run used for the results (section 4a)
+# Part 2 – main result: 130 epochs, 10 iterations (section 4c)
+python -m air.loop --run-name flash35-e130-10iter --backend gemini --model gemini-3.5-flash \
+    --pretrain-epochs 130 --max-iters 10 --propose-next --timeout-min 60
+
+# 50-epoch pilot run (section 4a)
 python -m air.loop --run-name flash35-clean --backend gemini --model gemini-3.5-flash --max-iters 5 --propose-next
 
 # Part 2 – one LLM candidate (+ the next proposal, generated from the feedback, not executed)
@@ -171,7 +178,7 @@ runs/<run>/
 
 ## 4. Results
 
-### 4a. Clean run `runs/flash35-clean` (hinton, 2026-11-14) — main result
+### 4a. 50-epoch pilot run `runs/flash35-clean` (hinton, 2026-11-14)
 
 A fresh run made after the LLM setup was fixed, so every iteration is a real Gemini proposal.
 `runs/main` (4b below) is kept untouched as the honest record of the first attempt, including its
@@ -291,7 +298,7 @@ Hardware: hinton, 1× NVIDIA H100 NVL (95,830 MiB, shared; ~12.6 GB used by othe
 AMD EPYC 9124 (32 threads), 377 GB RAM; Python 3.10.22, torch 2.1.0+cu121, torchvision 0.16.0, cuDNN 8.9.2.
 Exact strings in `runs/main/run_config.json`. Budget: 50 pretrain epochs ≈ 7 min per experiment.
 
-### 4c. Second loop run at the full budget `runs/flash35-e130-10iter` (hinton, 2026-11-14)
+### 4c. Main result: full-budget loop `runs/flash35-e130-10iter` (hinton, 2026-11-14)
 
 Same loop and LLM, but **130 pretrain epochs per experiment and 10 iterations** (separate budget
 fingerprint, so not mixed with the 50-epoch runs). ≈ 18 min per experiment, 11 experiments ≈ 3.3 h.
@@ -349,7 +356,8 @@ No LLM, check or runtime failures. The 130-epoch baseline reproduced at 47.27 % 
   `--backend file --response-file ...`, which is logged as `backend: file` in the history.
 * **Failures**: every failed proposal (parse error, static check, smoke test, crash,
   timeout) is kept in `history.jsonl` and shown in the visualization.
-* **Two runs**: `runs/main` (first attempt, iterations 1–4 are LLM-setup failures) and
+* **Runs**: main result `runs/flash35-e130-10iter` (130 epochs, 10 iterations); 50-epoch pilot runs
+  `runs/main` (first attempt, iterations 1–4 are LLM-setup failures) and
   `runs/flash35-clean` (fresh run after the setup was fixed). Neither log was edited; the clean run
   was started as a new run instead of deleting failures from the old one.
 * **Known limitation**: one seed per candidate on a 3,021-image validation set; the
