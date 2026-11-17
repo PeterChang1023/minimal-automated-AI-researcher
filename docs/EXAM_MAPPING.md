@@ -11,17 +11,17 @@ Legend: ✅ done in repo · 🖥 goes on a slide · ⏳ still to do
 | Explain linear evaluation | 🖥 | Slide. Source: `linear_eval()` in [`fmlbench_task/train_eval_baseline.py`](../fmlbench_task/train_eval_baseline.py): freeze backbone, extract 512-d features, train one linear layer 100 epochs, top-1 on val |
 | One possible modification | 🖥 | Slide. Use the one the loop actually found: InfoNCE/SimCLR loss (iter 5); alternatives VICReg, lower λ, shorter-schedule lr |
 | Run baseline / shortened experiment | ✅ | `runs/flash35-e130-10iter/iter_000/` (130 epochs, main result, 47.27 %), `runs/full130/iter_000/` (130 epochs); 50-epoch pilots `runs/main/iter_000/`, `runs/flash35-clean/iter_000/` |
-| Validation accuracy | ✅ | 28.67 % (50 ep) · 47.04 % (130 ep) vs reported 47.77 % — README §4 |
-| Commands | ✅ | README §1–2 (`--baseline-only`, `--pretrain-epochs 130`) |
-| Hardware | ✅ | README §4, `runs/main/run_config.json` (H100 NVL, EPYC 9124, torch 2.1.0+cu121) |
-| Seed | ✅ | `set_seed(42)`, linear-probe seed 100, split seed 42 — README §3, `run_config.json` |
-| Training budget | ✅ | 50 pretrain epochs ≈ 430 s; 130 epochs ≈ 1,070 s — README §4 |
+| Validation accuracy | ✅ | 28.67 % (50 ep) · 47.04 % (130 ep) vs reported 47.77 % — docs/DETAILS.md §4 |
+| Commands | ✅ | docs/DETAILS.md §1–2 (`--baseline-only`, `--pretrain-epochs 130`) |
+| Hardware | ✅ | docs/DETAILS.md §4, `runs/main/run_config.json` (H100 NVL, EPYC 9124, torch 2.1.0+cu121) |
+| Seed | ✅ | `set_seed(42)`, linear-probe seed 100, split seed 42 — docs/DETAILS.md §3, `run_config.json` |
+| Training budget | ✅ | 50 pretrain epochs ≈ 430 s; 130 epochs ≈ 1,070 s — docs/DETAILS.md §4 |
 
 ## Part 2. Build an autonomous research loop (12 min)
 
 | Requirement | Status | Where |
 |---|---|---|
-| Propose → Modify → Execute → Evaluate → Record | ✅ | [`air/loop.py`](../air/loop.py) (`propose`, `run_candidate`, `evaluate`, `_append`); README §3 table |
+| Propose → Modify → Execute → Evaluate → Record | ✅ | [`air/loop.py`](../air/loop.py) (`propose`, `run_candidate`, `evaluate`, `_append`); docs/DETAILS.md §3 table |
 | LLM proposes hypothesis, edits a **copy** of algorithm.py | ✅ | `runs/main/iter_005/proposal.json`, `algorithm.py`, `diff_vs_baseline.patch`; upstream file never edited |
 | Code executes, evaluates, accepts/rejects, records feedback | ✅ | [`air/executor.py`](../air/executor.py), `Run.evaluate`, `history.jsonl` field `feedback` |
 | Preserve baseline and best valid code | ✅ | `runs/main/baseline/`, `runs/main/best/` (+ `meta.json`) |
@@ -59,7 +59,7 @@ Legend: ✅ done in repo · 🖥 goes on a slide · ⏳ still to do
 | GitHub repo: code | ✅ | `air/`, `scripts/`, `fmlbench_task/` |
 | README | ✅ | `README.md` |
 | Environment | ✅ | `environment.yml` |
-| Commands | ✅ | README §1–2 |
+| Commands | ✅ | docs/DETAILS.md §1–2 |
 | Logs | ✅ | `runs/flash35-e130-10iter/` + `runs/flash35-e130-10iter.log`, `runs/main/`, `runs/flash35-clean/` + `runs/flash35-clean.log` (full), `runs/full130/` + `runs/full130.log` |
 | Visualization | ✅ | `runs/flash35-e130-10iter/viz/`, `runs/flash35-clean/viz/`, `runs/main/viz/` |
-| Disclose LLM, libraries, interventions, failures | ✅ | README header table + §5 Disclosure; failures in §4 table |
+| Disclose LLM, libraries, interventions, failures | ✅ | README Disclosure; failures in §4 table |
