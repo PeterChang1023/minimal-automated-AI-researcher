@@ -213,6 +213,26 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
 
   <div class="note" id="review-note"></div>
 
+  <div class="grid2">
+    <section class="panel">
+      <h2>每一輪的 val acc</h2>
+      <p class="sub">滑過點看那輪改了什麼，點下去跳到那輪的卡片。綠色帶是目前最佳 ± <span class="np"></span> pt（seed 雜訊）。</p>
+      <div class="chartbox" id="chartbox"><svg id="chart" viewBox="0 0 720 330" width="100%" role="img" aria-label="val acc per iteration"></svg><div class="tip" id="tip"></div></div>
+      <div class="legend">
+        <span><i style="background:var(--base)"></i>baseline</span>
+        <span><i style="background:var(--acc)"></i>接受</span>
+        <span><i style="background:var(--rej)"></i>拒絕</span>
+        <span><i class="sq" style="background:var(--band)"></i>最佳 ± <span class="np"></span> pt</span>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>版本演進</h2>
+      <p class="sub">每個候選是從哪一版改出來的（record.json 的 parent_iter）。上排是被接受、成為新 best 的版本。</p>
+      <div style="overflow-x:auto"><svg id="lineage" width="100%" role="img" aria-label="lineage"></svg></div>
+      <p class="sub" id="lineage-note" style="margin-top:6px"></p>
+    </section>
+  </div>
+
   <section class="panel" id="overview">
     <div class="ov-top">
       <div><h2>Review 總覽</h2><p class="sub" id="ov-status"></p></div>
@@ -229,26 +249,6 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
       <tbody id="ov-body"></tbody>
     </table></div>
   </section>
-
-  <div class="grid2">
-    <section class="panel">
-      <h2>每一輪的 val acc</h2>
-      <p class="sub">滑過點看那輪改了什麼，點下去跳到那輪的卡片。綠色帶是目前最佳 ± <span class="np"></span> pt（seed 雜訊）。</p>
-      <div class="chartbox" id="chartbox"><svg id="chart" viewBox="0 0 720 330" width="100%" role="img" aria-label="val acc per iteration"></svg><div class="tip" id="tip"></div></div>
-      <div class="legend">
-        <span><i style="background:var(--base)"></i>baseline</span>
-        <span><i style="background:var(--acc)"></i>接受</span>
-        <span><i style="background:var(--rej)"></i>拒絕</span>
-        <span><i class="sq" style="background:var(--band)"></i>最佳 ± <span class="np"></span> pt</span>
-      </div>
-    </section>
-    <section class="panel">
-      <h2>版本系譜</h2>
-      <p class="sub">每個候選是從哪一版改出來的（record.json 的 parent_iter）。上排是被接受、成為新 best 的版本。</p>
-      <div style="overflow-x:auto"><svg id="lineage" width="100%" role="img" aria-label="lineage"></svg></div>
-      <p class="sub" id="lineage-note" style="margin-top:6px"></p>
-    </section>
-  </div>
 
 
   <nav class="chips" id="chips" aria-label="iterations"></nav>
