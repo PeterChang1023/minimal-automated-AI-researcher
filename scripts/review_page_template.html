@@ -81,6 +81,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .kv dt{color:var(--muted);font-size:12.5px;padding-top:2px}
 .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
 @media (max-width:560px){.kv{grid-template-columns:minmax(0,1fr)} .kv dt{padding-top:6px}}
+.keys{display:flex;flex-wrap:wrap;gap:6px}
+.key{display:inline-flex;align-items:baseline;gap:6px;border:1px solid var(--line);background:var(--sunk);border-radius:7px;padding:2px 9px;font:500 13px/1.6 "IBM Plex Mono",monospace;max-width:100%;overflow-wrap:anywhere}
+.key .sc{font-size:11.5px;color:var(--muted);font-weight:400}
+.key .ar{color:var(--acc);font-weight:600}
+.key.add .t{color:var(--acc)} .key.del .t{color:var(--rej)} .key.rw .t{color:var(--muted)}
+.tip .kc{font-family:"IBM Plex Mono",monospace;font-size:12px}
 .fb{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--sunk);border-left:3px solid var(--line);padding:4px 10px;border-radius:0 6px 6px 0}
 .fb.accepted{border-left-color:var(--acc)} .fb.rejected{border-left-color:var(--rej)} .fb.baseline{border-left-color:var(--base)}
 .tabs{display:flex;gap:2px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
@@ -190,6 +196,20 @@ const pct = v => v == null ? "—" : (v * 100).toFixed(2);
 const LABEL = {accepted:"接受", rejected:"拒絕", baseline:"baseline", failed:"失敗", next:"下一步提案"};
 const short = it => it.kind === "baseline" ? "baseline（官方原始程式）" : (it.change_summary || it.hypothesis || "").replace(/^Replaced /, "Replaced ");
 
+/* ---------- key changes (extracted from the diff by the generator) ---------- */
+function keyChips(list) {
+  const box = el("div", {class: "keys"});
+  for (const c of list || []) {
+    const cls = c.text.startsWith("新增") ? "add" : c.text.startsWith("移除") ? "del" : c.text.startsWith("改寫") ? "rw" : "";
+    const t = el("span", {class: "t"});
+    const parts = c.text.split(" → ");
+    if (parts.length === 2) t.append(parts[0], el("span", {class: "ar", text: " → "}), parts[1]); else t.textContent = c.text;
+    box.append(el("span", {class: "key " + cls, title: c.scope}, el("span", {class: "sc", text: c.scope}), t));
+  }
+  return box;
+}
+const keyText = it => (it.key_changes || []).map(c => c.text).join("；");
+
 const iters = D.iters;
 const noise = D.noise_pts;
 document.querySelectorAll(".np").forEach(n => n.textContent = noise);
@@ -242,7 +262,7 @@ $("#stats").append(
   const tip = $("#tip"), box = $("#chartbox");
   const show = (it, cx, cy) => {
     tip.innerHTML = `<b>iter ${it.iter}</b> · ${LABEL[it.decision] || it.decision} · <b>${pct(it.val_acc)}%</b>` +
-      (it.delta_pts != null ? ` (${it.delta_pts > 0 ? "+" : ""}${it.delta_pts} pt)` : "") + `<br>${esc(short(it)).slice(0, 220)}`;
+      (it.delta_pts != null ? ` (${it.delta_pts > 0 ? "+" : ""}${it.delta_pts} pt)` : "") + (keyText(it) ? `<br><span class="kc">${esc(keyText(it))}</span>` : "") + `<br>${esc(short(it)).slice(0, 200)}`;
     const r = box.getBoundingClientRect(), s = r.width / W;
     let x = cx * s + 12, y = cy * s - 10;
     tip.classList.add("on");
@@ -274,7 +294,7 @@ $("#stats").append(
     const g = sv("g", {class: "pt"});
     g.append(sv("circle", {cx: x, cy: y, r: 5.5, fill: "none", stroke: "var(--muted)", "stroke-width": 1.5, "stroke-dasharray": "2 2"}));
     g.append(sv("circle", {cx: x, cy: y, r: 15, fill: "transparent"}));
-    g.addEventListener("pointerenter", () => { tip.innerHTML = `<b>下一步提案</b>（未執行）<br>${esc(D.next.change_summary).slice(0, 220)}`; const r = box.getBoundingClientRect(), s = r.width / W; tip.classList.add("on"); tip.style.left = Math.max(0, x * s - tip.offsetWidth - 12) + "px"; tip.style.top = (y * s) + "px"; });
+    g.addEventListener("pointerenter", () => { tip.innerHTML = `<b>下一步提案</b>（未執行）` + (keyText(D.next) ? `<br><span class="kc">${esc(keyText(D.next))}</span>` : "") + `<br>${esc(D.next.change_summary).slice(0, 200)}`; const r = box.getBoundingClientRect(), s = r.width / W; tip.classList.add("on"); tip.style.left = Math.max(0, x * s - tip.offsetWidth - 12) + "px"; tip.style.top = (y * s) + "px"; });
     g.addEventListener("pointerleave", hide);
     g.addEventListener("click", () => jump("next"));
     svg.append(g);
@@ -314,7 +334,7 @@ $("#stats").append(
     g.append(sv("circle", {cx: x, cy: y, r: 13, fill: "var(--surface)", stroke: color, "stroke-width": 2}));
     g.append(sv("text", {x, y: y + 4, "text-anchor": "middle", "font-size": 11.5, "font-weight": 600, fill: color, "font-family": "IBM Plex Mono, monospace"}, it.iter));
     g.append(sv("text", {x, y: y + (onTop(it) ? -19 : 28), "text-anchor": "middle", "font-size": 10, fill: "var(--muted)", "font-family": "IBM Plex Mono, monospace"}, pct(it.val_acc)));
-    const ttl = sv("title", {}, `iter ${it.iter}（從 iter ${it.parent_iter ?? "—"} 改）: ${short(it)}`); g.append(ttl);
+    const ttl = sv("title", {}, `iter ${it.iter}（從 iter ${it.parent_iter ?? "—"} 改）: ${keyText(it) || short(it)}`); g.append(ttl);
     g.addEventListener("pointerenter", () => { const e = edgeEls[it.iter]; if (e) { e.setAttribute("stroke", "var(--ink)"); e.setAttribute("stroke-width", 2.5); e.setAttribute("opacity", 1); } });
     g.addEventListener("pointerleave", () => { const e = edgeEls[it.iter]; if (e) { const t = onTop(it); e.setAttribute("stroke", t ? "var(--acc)" : "var(--faint)"); e.setAttribute("stroke-width", t ? 2.5 : 1.3); e.setAttribute("opacity", t ? 1 : .75); } });
     g.addEventListener("click", () => jump(it.iter));
@@ -492,6 +512,7 @@ function card(it) {
   const body = el("div", {class: "card-b"});
   const kv = el("dl", {class: "kv"});
   const row = (t, v, cls) => { if (v) kv.append(el("dt", {text: t}), el("dd", {class: cls || "", text: v})); };
+  if (it.key_changes && it.key_changes.length) kv.append(el("dt", {text: "關鍵改動"}), el("dd", {}, keyChips(it.key_changes)));
   row("改了什麼", it.change_summary && it.change_summary !== "none" ? it.change_summary : (it.kind === "baseline" ? "沒改（官方原始 Barlow Twins）" : ""));
   row("假設", it.kind === "baseline" ? "" : it.hypothesis);
   row("理由", it.rationale);

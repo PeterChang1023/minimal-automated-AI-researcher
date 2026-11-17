@@ -15,8 +15,11 @@ What the page shows, all read from history.jsonl and iter_*/ (nothing typed by h
                         claude.ai Artifact with the `db` + `user` capabilities, hidden otherwise
 """
 import argparse
+import ast
+import difflib
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
 
@@ -34,6 +37,153 @@ def history_block(prompt: str, k: int):
     if not b:
         return sec, -1, -1
     return sec, b.start(), b.start() + len(b.group(0).rstrip())
+
+
+# ---------- key-change extraction: turn a code diff into short "what changed" chips ----------
+KW_RE = re.compile(r"""['"]?\b([A-Za-z_]\w*)['"]?\s*(?<![=!<>])[=:](?!=)\s*(\([^()]*\)|\[[^\[\]]*\]|[^,()\[\]{}]+)""")
+CALL_RE = re.compile(r"\b(?:nn|transforms|T|F|torch)\.([A-Z]\w+)\s*\(")
+
+
+def _noise_lines(src: str):
+    """Line numbers (1-based) that are docstrings, comments or blank: changes there are not code changes."""
+    out = set()
+    for i, ln in enumerate(src.splitlines(), 1):
+        if not ln.strip() or ln.strip().startswith("#"):
+            out.add(i)
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return out
+    for node in ast.walk(tree):
+        body = getattr(node, "body", None)
+        if isinstance(body, list) and body and isinstance(body[0], ast.Expr) \
+                and isinstance(getattr(body[0], "value", None), ast.Constant) and isinstance(body[0].value.value, str):
+            out.update(range(body[0].lineno, body[0].end_lineno + 1))
+    return out
+
+
+def _scopes(src: str):
+    """Map line number -> 'Class.method' (innermost def/class around it)."""
+    names = {}
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return names
+
+    def visit(node, prefix):
+        for ch in ast.iter_child_nodes(node):
+            if isinstance(ch, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                q = f"{prefix}.{ch.name}" if prefix else ch.name
+                for ln in range(ch.lineno, ch.end_lineno + 1):
+                    names[ln] = q
+                visit(ch, q)
+    visit(tree, "")
+    return names
+
+
+def _code(line: str):
+    return re.sub(r"\s+", "", line.split("#")[0])
+
+
+def _kwargs(line: str):
+    """keyword arguments `f(name=value)` and dict entries `'name': value` (not plain assignments)."""
+    line = line.split("#")[0]
+    out = {}
+    for m in KW_RE.finditer(line):
+        before = line[:m.start()].rstrip()
+        quoted = m.group(0).lstrip()[:1] in "'\""
+        if quoted or before.endswith(("(", ",", "{")):
+            out[m.group(1)] = m.group(2).strip()
+    return out
+
+
+def _nums(line: str):
+    return re.findall(r"(?<![\w.])\d+(?:\.\d+)?(?:e-?\d+)?", line.split("#")[0])
+
+
+def key_changes(patch: str, old_src: str, new_src: str):
+    """Return [{scope, text}] — parameter changes as 'name old → new', component adds/removals,
+    otherwise 'rewritten (+a −d lines)'. Docstring / comment edits are ignored."""
+    if not patch.strip():
+        return []
+    skip_old, skip_new = _noise_lines(old_src), _noise_lines(new_src)
+    sc_old, sc_new = _scopes(old_src), _scopes(new_src)
+    blocks, buf, a, b = [], ([], []), 0, 0
+    for ln in patch.splitlines():
+        h = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", ln)
+        if h:
+            if buf[0] or buf[1]: blocks.append(buf)
+            buf, a, b = ([], []), int(h.group(1)) - 1, int(h.group(2)) - 1
+        elif ln.startswith(("---", "+++")):
+            continue
+        elif ln.startswith("-"):
+            a += 1
+            if a not in skip_old: buf[0].append((a, ln[1:]))
+        elif ln.startswith("+"):
+            b += 1
+            if b not in skip_new: buf[1].append((b, ln[1:]))
+        elif ln.startswith(" "):
+            a += 1; b += 1
+            if buf[0] or buf[1]: blocks.append(buf); buf = ([], [])
+    if buf[0] or buf[1]: blocks.append(buf)
+
+    per_scope = {}  # scope -> {"items": [...], "add": n, "del": n}
+    for dels, adds in blocks:
+        scope = (sc_new.get(adds[0][0]) if adds else None) or (sc_old.get(dels[0][0]) if dels else None) or "module"
+        s = per_scope.setdefault(scope, {"items": [], "add": 0, "del": 0, "explained": 0, "noop": 0})
+        s["add"] += len(adds); s["del"] += len(dels)
+        # 1) paired lines: keyword / dict-key value changes
+        used_d, used_a = set(), set()
+        for i, (_, dl) in enumerate(dels):
+            for j, (_, al) in enumerate(adds):
+                if j in used_a: continue
+                if _code(dl) == _code(al):  # only a comment / spacing changed
+                    used_d.add(i); used_a.add(j); s["noop"] += 2; break
+                if difflib.SequenceMatcher(None, _code(dl), _code(al)).ratio() < 0.6:
+                    continue
+                kd, ka = _kwargs(dl), _kwargs(al)
+                if not kd and not ka: continue
+                if _nums(dl) == _nums(al) and all(k not in kd or kd[k] == ka[k] for k in ka) and not set(kd) - set(ka):
+                    used_d.add(i); used_a.add(j); s["noop"] += 2; break  # same values, only spelled differently
+                for k in kd:
+                    if k in ka and kd[k] != ka[k]:
+                        s["items"].append(f"{k}: {kd[k]} → {ka[k]}")
+                for k in ka:
+                    if k not in kd:
+                        s["items"].append(f"新增 {k} = {ka[k]}")
+                for k in kd:
+                    if k not in ka:
+                        s["items"].append(f"移除 {k}")
+                used_d.add(i); used_a.add(j)
+                break
+        # 2) components added / removed (nn.X(...), transforms.X(...))
+        rest_d = [l for i, (_, l) in enumerate(dels) if i not in used_d]
+        rest_a = [l for j, (_, l) in enumerate(adds) if j not in used_a]
+        cd = Counter(n for l in rest_d for n in CALL_RE.findall(l))
+        ca = Counter(n for l in rest_a for n in CALL_RE.findall(l))
+        for n, c in (cd - ca).items():
+            s["items"].append(f"移除 {n}" + (f" ×{c}" if c > 1 else ""))
+        for n, c in (ca - cd).items():
+            extra = ""
+            for l in rest_a:
+                m = re.search(rf"\b{n}\s*\(([^()]*)\)", l)
+                if m and "=" in m.group(1):
+                    extra = "(" + ", ".join(f"{k}={v}" for k, v in _kwargs(m.group(1)).items()) + ")"
+                    break
+            s["items"].append(f"新增 {n}{extra}" + (f" ×{c}" if c > 1 else ""))
+        explained = len(used_d) + len(used_a) + sum(1 for l in rest_d + rest_a if CALL_RE.search(l))
+        s["explained"] += explained
+    out = []
+    for scope, s in per_scope.items():
+        unexplained = s["add"] + s["del"] - s["explained"]
+        items = list(dict.fromkeys(s["items"]))
+        if s["add"] + s["del"] - s["noop"] <= 0:
+            continue
+        if unexplained > 3 or not items:
+            items.append(f"改寫程式（+{s['add']} −{s['del']} 行）")
+        for t in items:
+            out.append({"scope": scope, "text": t})
+    return out
 
 
 def collect(run_dir: Path, noise_pts: float):
@@ -81,6 +231,14 @@ def collect(run_dir: Path, noise_pts: float):
             "diff_best": read(nd / "diff_vs_best.patch"), "diff_base": read(nd / "diff_vs_baseline.patch"),
             "prompt_user": read(nd / "prompt_user.txt"),
         }
+    # key changes vs the parent (best at the time); docstring/comment edits ignored
+    src = lambda k: read(run_dir / f"iter_{int(k):03d}" / "algorithm.py") if k is not None else ""
+    for it in iters:
+        if it["kind"] != "baseline":
+            it["key_changes"] = key_changes(it["diff_best"], src(it["parent_iter"]), src(it["iter"]))
+    if nxt:
+        best_k = max((i for i in iters if i["decision"] in ("accepted", "baseline")), key=lambda i: i["iter"])["iter"]
+        nxt["key_changes"] = key_changes(nxt["diff_best"], src(best_k), read(nd / "algorithm.py"))
     # feedback chain: iteration k's entry inside the NEXT prompt (k+1, or next_proposal after the last)
     by_k = {it["iter"]: it for it in iters}
     for it in iters:
