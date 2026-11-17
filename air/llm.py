@@ -40,7 +40,10 @@ class GeminiBackend(Backend):
     def __init__(self, model: str, temperature: float = 0.7, max_retries: int = 5, timeout: int = 600):
         self.model = model
         self.temperature = temperature
-        self.max_retries = max_retries
+        # 503 "high demand" spikes on the free tier can last >10 min; these env vars let a long
+        # run wait them out without changing defaults (AIR_LLM_RETRIES, AIR_LLM_MAX_WAIT seconds).
+        self.max_retries = int(os.environ.get("AIR_LLM_RETRIES", max_retries))
+        self.max_wait = int(os.environ.get("AIR_LLM_MAX_WAIT", 60))
         self.timeout = timeout
         self.key = os.environ.get("GEMINI_API_KEY")
         if not self.key:
@@ -81,7 +84,7 @@ class GeminiBackend(Backend):
                     raise LLMError(last) from e
             except (urllib.error.URLError, TimeoutError, LLMError) as e:
                 last = str(e)
-            wait = min(60, 5 * 2 ** attempt)
+            wait = min(self.max_wait, 5 * 2 ** attempt)
             print(f"[llm] gemini call failed ({last}); retry in {wait}s", flush=True)
             time.sleep(wait)
         raise LLMError(f"gemini failed after {self.max_retries} attempts: {last}")
