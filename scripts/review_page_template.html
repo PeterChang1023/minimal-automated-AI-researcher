@@ -87,6 +87,45 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .key .ar{color:var(--acc);font-weight:600}
 .key.add .t{color:var(--acc)} .key.del .t{color:var(--rej)} .key.rw .t{color:var(--muted)}
 .tip .kc{font-family:"IBM Plex Mono",monospace;font-size:12px}
+.ov-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px 16px}
+.ov-wrap{overflow-x:auto;margin-top:4px}
+table.ov{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
+table.ov th{font-size:11.5px;font-weight:600;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);letter-spacing:.02em;line-height:1.3}
+table.ov td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.ov tbody tr{cursor:pointer} table.ov tbody tr:hover,table.ov tbody tr:focus{background:var(--sunk);outline:none}
+table.ov .num{text-align:right;font-variant-numeric:tabular-nums}
+table.ov td.num{font-family:"IBM Plex Mono",monospace}
+table.ov td.agree{color:var(--acc);font-weight:600} table.ov td.doubt{color:var(--rej);font-weight:600} table.ov td.seeds{color:var(--warn);font-weight:600}
+.kc-cell{font-family:"IBM Plex Mono",monospace;font-size:12.5px;max-width:340px}
+.ck-head{margin-bottom:4px}
+.ck-sum{font-size:12.5px;font-weight:600;border-radius:999px;padding:1px 9px;white-space:nowrap}
+.ck-sum.ok{background:var(--acc-soft);color:var(--acc)} .ck-sum.warn{background:var(--warn-soft);color:var(--warn)} .ck-sum.fail{background:var(--rej-soft);color:var(--rej)}
+.ck-chips{display:flex;flex-wrap:wrap;gap:5px}
+.ck{font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:1px 8px;background:var(--surface);cursor:help}
+.ck b{margin-right:5px;font-family:"IBM Plex Mono",monospace}
+.ck.ok b,.ck-i.ok{color:var(--acc)} .ck.warn b,.ck-i.warn{color:var(--warn)} .ck.fail b,.ck-i.fail{color:var(--rej)} .ck.info b,.ck-i.info{color:var(--base)}
+.ck.fail{border-color:var(--rej)} .ck.warn{border-color:var(--warn)}
+.ck-det{margin-top:6px;font-size:13px} .ck-det summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+.ck-det ul{margin:6px 0 0;padding-left:0;list-style:none;display:grid;gap:3px}
+.ck-i{font-family:"IBM Plex Mono",monospace;margin-right:6px} .ck-n{font-weight:600;margin-right:4px}
+.rv-only{display:none} body.rv-write .rv-only{display:block}
+body.rv-write table.diff td.ln[data-side]:not(:empty){cursor:pointer}
+body.rv-write table.diff td.ln[data-side]:not(:empty):hover{background:var(--base-soft);color:var(--base)}
+table.diff td.ln.has-c{background:var(--mark);color:var(--mark-ink);font-weight:600}
+table.diff tr.thr td,table.diff tr.composer td{background:var(--surface);padding:8px 10px;white-space:normal;font-family:"IBM Plex Sans","Noto Sans TC",sans-serif;font-size:13.5px;border-block:1px solid var(--line)}
+.thread{border:1px solid var(--line);border-left:3px solid var(--base);border-radius:8px;padding:8px 10px;background:var(--surface);max-width:760px}
+.thread+.thread{margin-top:8px}
+.thread.resolved{border-left-color:var(--acc);opacity:.85}
+.th-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.th-m{margin-top:4px} .th-m.reply{margin-left:14px;padding-left:10px;border-left:2px solid var(--line);margin-top:8px}
+.th-b{white-space:pre-wrap;overflow-wrap:anywhere}
+.th-peek{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.st-pill{font-size:11px;font-weight:600;border-radius:999px;padding:0 8px}
+.st-pill.open{background:var(--rej-soft);color:var(--rej)} .st-pill.done{background:var(--acc-soft);color:var(--acc)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+button.link{background:none;border:0;padding:0;color:var(--base);font:inherit;font-size:12.5px;cursor:pointer}
+.reply-ta{margin-top:6px;min-height:50px}
+.tcount{color:var(--rej);font-size:12px}
 .fb{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--sunk);border-left:3px solid var(--line);padding:4px 10px;border-radius:0 6px 6px 0}
 .fb.accepted{border-left-color:var(--acc)} .fb.rejected{border-left-color:var(--rej)} .fb.baseline{border-left-color:var(--base)}
 .tabs{display:flex;gap:2px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
@@ -168,6 +207,23 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
 
   <div class="note" id="review-note"></div>
 
+  <section class="panel" id="overview">
+    <div class="ov-top">
+      <div><h2>Review 總覽</h2><p class="sub" id="ov-status"></p></div>
+      <div class="seg" id="ov-seg">
+        <button data-f="all">全部</button>
+        <button data-f="doubt" data-rv>有人懷疑</button>
+        <button data-f="seeds" data-rv>要多跑 seed</button>
+        <button data-f="open" data-rv>有未解決留言</button>
+        <button data-f="checks">檢查沒通過</button>
+      </div>
+    </div>
+    <div class="ov-wrap"><table class="ov">
+      <thead><tr><th>iter</th><th>關鍵改動</th><th class="num">val acc</th><th>判定</th><th>自動檢查</th><th class="num">同意</th><th class="num">懷疑</th><th class="num">多跑 seed</th><th class="num">行內留言<br><span class="muted">未解決/全部</span></th></tr></thead>
+      <tbody id="ov-body"></tbody>
+    </table></div>
+  </section>
+
   <nav class="chips" id="chips" aria-label="iterations"></nav>
   <main id="cards"></main>
 
@@ -211,6 +267,7 @@ function keyChips(list) {
 const keyText = it => (it.key_changes || []).map(c => c.text).join("；");
 
 const iters = D.iters;
+const RV = {on: false, canWrite: false, db: null, user: null, me: null, verdicts: {}, comments: {}, res: {}, ps: {}, open: new Set()};
 const noise = D.noise_pts;
 document.querySelectorAll(".np").forEach(n => n.textContent = noise);
 document.querySelectorAll(".rn").forEach(n => n.textContent = D.run);
@@ -415,14 +472,23 @@ function parseDiff(txt) {
   flush();
   return {oldName, newName, rows, adds, dels};
 }
-function renderDiff(txt) {
+const DIFFS = []; // rendered diff tables, re-decorated with line comments when review data changes
+function renderDiff(txt, iter, mode) {
   if (!txt.trim()) return el("p", {class: "muted small", text: "這輪沒有程式差異（和比較對象相同）。"});
   const d = parseDiff(txt);
   const t = document.createElement("table"); t.className = "diff";
   let h = `<thead><tr><td class="ln"></td><td class="c">${esc(d.oldName)}</td><td class="ln"></td><td class="c">${esc(d.newName)}</td></tr></thead><tbody>`;
   for (const r of d.rows) h += r.t === "h" ? `<tr class="h"><td colspan="4">${esc(r.text)}</td></tr>`
-    : `<tr><td class="ln">${r.la}</td><td class="c ${r.lk}">${r.lh}</td><td class="ln">${r.rb}</td><td class="c ${r.rk}">${r.rh}</td></tr>`;
+    : `<tr data-o="${r.la}" data-n="${r.rb}"><td class="ln" data-side="o">${r.la}</td><td class="c ${r.lk}">${r.lh}</td><td class="ln" data-side="n">${r.rb}</td><td class="c ${r.rk}">${r.rh}</td></tr>`;
   t.innerHTML = h + "</tbody>";
+  const entry = {table: t, iter: String(iter), mode};
+  DIFFS.push(entry);
+  t.addEventListener("click", e => {
+    const td = e.target.closest("td.ln[data-side]");
+    if (!td || !td.textContent.trim() || !RV.canWrite) return;
+    openComposer(entry, td.closest("tr"), td.dataset.side, +td.textContent);
+  });
+  if (RV.on) decorate(entry);
   const wrap = el("div");
   wrap.append(el("div", {class: "diffbox"}, t));
   wrap.dataset.stat = `<span class="a">+${d.adds}</span> <span class="r">−${d.dels}</span> 行`;
@@ -437,10 +503,10 @@ function diffPane(it) {
   const opts = [["best", parentLbl, it.diff_best], ["base", "對 baseline", it.diff_base]];
   const pick = k => {
     seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.k === k));
-    body.replaceChildren(); const r = renderDiff(opts.find(o => o[0] === k)[2]); body.append(r); stat.innerHTML = r.dataset.stat || "";
+    body.replaceChildren(); const r = renderDiff(opts.find(o => o[0] === k)[2], it.iter, k); body.append(r); stat.innerHTML = r.dataset.stat || "";
   };
   for (const [k, l] of opts) seg.append(el("button", {"data-k": k, text: l, onclick: () => pick(k)}));
-  pane.append(el("div", {}, seg, stat), body);
+  pane.append(el("div", {}, seg, stat), el("p", {class: "muted small rv-only", style: "margin:0 0 6px", text: "點左右兩邊的行號，可以在那一行留言。"}), body);
   pick("best");
   return pane;
 }
@@ -494,6 +560,27 @@ function promptPane(it) {
   return el("div", {}, el("p", {class: "muted small", text: "這輪 Gemini 實際收到的 user prompt（system prompt 在 iter 資料夾的 prompt_system.txt）。"}), el("pre", {class: "prompt", text: it.prompt_user}));
 }
 
+/* ---------- 3: automatic checks ---------- */
+const CK = {ok: "✓", warn: "!", fail: "✗", info: "i"};
+const checkSummary = list => {
+  const hard = (list || []).filter(c => c.status !== "info");
+  return {pass: hard.filter(c => c.status === "ok").length, total: hard.length, warn: hard.filter(c => c.status === "warn").length, fail: hard.filter(c => c.status === "fail").length};
+};
+function checksView(list) {
+  const sm = checkSummary(list);
+  const box = el("div");
+  const head = el("div", {class: "ck-head"},
+    el("span", {class: "ck-sum " + (sm.fail ? "fail" : sm.warn ? "warn" : "ok"), text: sm.fail ? `${sm.fail} 項沒通過` : sm.warn ? `${sm.warn} 項要注意` : `${sm.pass}/${sm.total} 全部通過`}));
+  const chips = el("div", {class: "ck-chips"});
+  for (const c of list) chips.append(el("span", {class: "ck " + c.status, title: c.detail}, el("b", {text: CK[c.status]}), c.name));
+  const det = el("details", {class: "ck-det"}, el("summary", {text: "看每項檢查的依據"}));
+  const ul = el("ul");
+  for (const c of list) ul.append(el("li", {}, el("b", {class: "ck-i " + c.status, text: CK[c.status]}), el("span", {class: "ck-n", text: c.name + "："}), document.createTextNode(c.detail)));
+  det.append(ul);
+  box.append(head, chips, det);
+  return box;
+}
+
 /* ---------- cards ---------- */
 const main = $("#cards");
 const cardEls = {};
@@ -517,7 +604,7 @@ function card(it) {
   row("假設", it.kind === "baseline" ? "" : it.hypothesis);
   row("理由", it.rationale);
   row("預期效果", it.expected_effect);
-  if (it.static_problems && it.static_problems.length) row("靜態檢查", it.static_problems.join("；"));
+  if (it.checks && it.checks.length) kv.append(el("dt", {text: "自動檢查"}), el("dd", {}, checksView(it.checks)));
   if (it.feedback) { kv.append(el("dt", {text: "程式判定"}), el("dd", {}, el("div", {class: "fb " + dec, text: it.feedback}))); }
   body.append(kv);
   const tabsDef = [["diff", "程式差異", diffPane], ["loss", "Loss 曲線", lossPane], ["chain", "回饋鏈", chainPane], ["prompt", "Gemini 看到的 prompt", promptPane]]
@@ -528,7 +615,7 @@ function card(it) {
     tabs.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.id === id));
     pane.replaceChildren(cache[id] ||= tabsDef.find(t => t[0] === id)[2](it));
   };
-  for (const [id, l] of tabsDef) tabs.append(el("button", {class: "tab", role: "tab", "data-id": id, text: l, onclick: () => sel(id)}));
+  for (const [id, l] of tabsDef) tabs.append(el("button", {class: "tab", role: "tab", "data-id": id, onclick: () => sel(id)}, l, id === "diff" ? el("span", {class: "tcount"}) : null));
   body.append(tabs, pane);
   sel(tabsDef[0][0]);
   const rv = el("div", {class: "review", hidden: ""}); body.append(rv);
@@ -540,82 +627,281 @@ iters.forEach(it => main.append(card(it)));
 if (D.next) main.append(card({...D.next, iter: "next", kind: "next", decision: "next", parent_iter: best.iter}));
 if (location.hash.startsWith("#iter-")) setTimeout(() => jump(location.hash.slice(6)), 50);
 
-/* ---------- 11: review (only inside a claude.ai Artifact with db + user) ---------- */
+/* ---------- 11 + 1 + 2: review data (only inside a claude.ai Artifact with db + user) ---------- */
 const VERD = {agree: "同意", doubt: "懷疑", seeds: "要多跑 seed"};
 const note = $("#review-note");
+const fmtT = t => String(t || "").slice(0, 16).replace("T", " ");
+const nameOf = uid => (RV.ps[uid]?.name || "某位 reviewer") + (uid === RV.me ? "（你）" : "");
+let writeQ = Promise.resolve();
+const queue = fn => (writeQ = writeQ.then(fn, fn));
+const errText = e => (e?.code === "permission_denied" || e?.code === "not_granted") ? "你沒有寫入權限" : "沒存成功，再試一次";
+
+// flat view of every comment: id -> {...comment, id, uid}
+function allComments() {
+  const out = {};
+  for (const [uid, doc] of Object.entries(RV.comments)) for (const [id, c] of Object.entries(doc.items || {})) if (c && typeof c === "object") out[id] = {...c, id, uid};
+  return out;
+}
+function threadsOf(iter) { // roots for one iteration, with replies
+  const all = allComments(), roots = [];
+  for (const c of Object.values(all)) if (!c.parent && String(c.iter) === String(iter)) roots.push({...c, replies: []});
+  const byId = Object.fromEntries(roots.map(r => [r.id, r]));
+  for (const c of Object.values(all)) if (c.parent && byId[c.parent]) byId[c.parent].replies.push(c);
+  for (const r of roots) { r.replies.sort((a, b) => String(a.at).localeCompare(String(b.at))); r.resolved = !!RV.res[r.id]?.resolved; }
+  return roots.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+}
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function writeMine(mutate) {
+  return queue(async () => {
+    const items = {...(RV.comments[RV.me]?.items || {})};
+    mutate(items);
+    await RV.db.doc("comments/" + RV.me).set({items, updatedAt: new Date().toISOString()});
+    RV.comments[RV.me] = {items};
+    rerender();
+  });
+}
+
+/* line composer */
+function openComposer(entry, tr, side, line) {
+  const next = tr.nextElementSibling;
+  if (next && next.classList.contains("composer")) { next.querySelector("textarea").focus(); return; }
+  const code = tr.querySelector(`td.ln[data-side="${side}"] + td`)?.textContent || "";
+  const ta = el("textarea", {placeholder: `對 ${side === "n" ? "新版" : "舊版"}第 ${line} 行留言…`, maxlength: "4000"});
+  const st = el("span", {class: "muted small"});
+  const row = el("tr", {class: "composer"});
+  const send = el("button", {class: "btn", text: "留言"});
+  const cancel = el("button", {class: "btn ghost", text: "取消", onclick: () => row.remove()});
+  send.addEventListener("click", () => {
+    const body = ta.value.trim(); if (!body) return;
+    send.disabled = true; st.textContent = "儲存中…";
+    const id = newId();
+    writeMine(items => { items[id] = {iter: entry.iter, mode: entry.mode, side, line, code: code.slice(0, 200), body: body.slice(0, 4000), parent: null, at: new Date().toISOString()}; })
+      .then(() => { row.remove(); RV.open.add(id); rerender(); })
+      .catch(e => { send.disabled = false; st.textContent = errText(e); });
+  });
+  row.append(el("td", {colspan: "4"}, el("div", {class: "thread new"}, ta, el("div", {class: "row"}, send, cancel, st))));
+  tr.after(row);
+  ta.focus();
+}
+
+/* thread rendering under a diff line */
+function threadEl(r) {
+  const open = !r.resolved || RV.open.has(r.id);
+  const box = el("div", {class: "thread" + (r.resolved ? " resolved" : "")});
+  const head = el("div", {class: "th-h"},
+    el("span", {class: "who", text: nameOf(r.uid)}), el("span", {class: "muted small", text: fmtT(r.at)}),
+    el("span", {class: "st-pill " + (r.resolved ? "done" : "open"), text: r.resolved ? "已解決" : "未解決"}));
+  if (r.resolved) {
+    const by = RV.res[r.id]?.by;
+    if (by) head.append(el("span", {class: "muted small", text: `由 ${nameOf(by)} 標記`}));
+    head.append(el("button", {class: "link", text: open ? "收起" : "展開", onclick: () => { open ? RV.open.delete(r.id) : RV.open.add(r.id); rerender(); }}));
+  }
+  box.append(head);
+  if (!open) { box.append(el("div", {class: "th-peek", text: r.deleted ? "（留言已刪除）" : r.body})); return box; }
+  const msg = (c, isRoot) => {
+    const m = el("div", {class: "th-m" + (isRoot ? "" : " reply")});
+    if (!isRoot) m.append(el("span", {class: "who", text: nameOf(c.uid)}), el("span", {class: "muted small", text: fmtT(c.at)}));
+    m.append(el("div", {class: "th-b" + (c.deleted ? " muted" : ""), text: c.deleted ? "（留言已刪除）" : c.body}));
+    if (c.uid === RV.me && !c.deleted) m.append(el("button", {class: "link", text: "刪除", onclick: () => writeMine(items => { if (items[c.id]) items[c.id] = {...items[c.id], deleted: true, body: ""}; }).catch(() => {})}));
+    return m;
+  };
+  box.append(msg(r, true));
+  for (const c of r.replies) box.append(msg(c, false));
+  if (RV.canWrite) {
+    const acts = el("div", {class: "row"});
+    const ta = el("textarea", {class: "reply-ta", placeholder: "回覆…", maxlength: "4000", hidden: ""});
+    const send = el("button", {class: "btn", text: "送出回覆", hidden: ""});
+    const st = el("span", {class: "muted small"});
+    const replyBtn = el("button", {class: "btn ghost", text: "回覆", onclick: () => { ta.hidden = false; send.hidden = false; replyBtn.hidden = true; ta.focus(); }});
+    send.addEventListener("click", () => {
+      const body = ta.value.trim(); if (!body) return;
+      send.disabled = true; st.textContent = "儲存中…";
+      const id = newId();
+      writeMine(items => { items[id] = {iter: r.iter, mode: r.mode, side: r.side, line: r.line, parent: r.id, body: body.slice(0, 4000), at: new Date().toISOString()}; })
+        .catch(e => { send.disabled = false; st.textContent = errText(e); });
+    });
+    const resolveBtn = el("button", {class: "btn ghost", text: r.resolved ? "重新打開" : "標為已解決", onclick: () => {
+      resolveBtn.disabled = true;
+      queue(() => RV.db.doc("resolutions/" + r.id).set({resolved: !r.resolved, by: RV.me, at: new Date().toISOString()}))
+        .then(() => { RV.res[r.id] = {resolved: !r.resolved, by: RV.me}; if (!r.resolved) RV.open.delete(r.id); rerender(); })
+        .catch(e => { resolveBtn.disabled = false; st.textContent = errText(e); });
+    }});
+    box.append(ta, el("div", {class: "row"}, replyBtn, send, resolveBtn, st));
+  }
+  return box;
+}
+function decorate(entry) {
+  const t = entry.table;
+  t.querySelectorAll("tr.thr").forEach(x => x.remove());
+  t.querySelectorAll("td.has-c").forEach(x => x.classList.remove("has-c"));
+  const groups = {};
+  for (const r of threadsOf(entry.iter)) if (r.mode === entry.mode) (groups[r.side + r.line] ||= []).push(r);
+  for (const [key, roots] of Object.entries(groups)) {
+    const side = key[0], line = key.slice(1);
+    const tr = t.querySelector(`tr[data-${side}="${line}"]`);
+    if (!tr) { // line not shown in this diff: keep the thread visible at the end
+      t.tBodies[0].append(el("tr", {class: "thr"}, el("td", {colspan: "4"}, el("div", {class: "muted small", text: `第 ${line} 行（不在目前的 diff 片段裡）`}), ...roots.map(threadEl))));
+      continue;
+    }
+    tr.querySelector(`td.ln[data-side="${side}"]`)?.classList.add("has-c");
+    let after = tr; while (after.nextElementSibling?.classList.contains("composer")) after = after.nextElementSibling;
+    after.after(el("tr", {class: "thr"}, el("td", {colspan: "4"}, ...roots.map(threadEl))));
+  }
+}
+
+/* per-iteration verdict panel (inside each card) */
+const forms = {};
+function buildVerdictForms() {
+  for (const [k, {review: rv}] of Object.entries(cardEls)) {
+    rv.hidden = false;
+    rv.append(el("div", {class: "eyebrow", text: "整輪判斷"}));
+    const f = {verdict: null};
+    if (RV.canWrite) {
+      const vs = el("div", {class: "verdicts"});
+      const ta = el("textarea", {placeholder: "理由或想追問的地方（選填）", maxlength: "2000"});
+      const status = el("span", {class: "muted small"});
+      const save = el("button", {class: "btn", text: "儲存", disabled: ""});
+      const paintBtns = () => vs.querySelectorAll(".vbtn").forEach(b => b.classList.toggle("on", b.dataset.v === f.verdict));
+      for (const [v, l] of Object.entries(VERD)) vs.append(el("button", {class: "vbtn " + v, "data-v": v, text: l, onclick: () => { f.verdict = f.verdict === v ? null : v; paintBtns(); save.disabled = false; }}));
+      ta.addEventListener("input", () => save.disabled = false);
+      save.addEventListener("click", () => {
+        const entry = {verdict: f.verdict, note: ta.value.trim().slice(0, 2000), at: new Date().toISOString()};
+        const items = {...(RV.verdicts[RV.me]?.items || {})};
+        if (!entry.verdict && !entry.note) delete items[k]; else items[k] = entry;
+        save.disabled = true; status.textContent = "儲存中…";
+        queue(() => RV.db.doc("reviews/" + RV.me).set({items, updatedAt: entry.at}))
+          .then(() => { RV.verdicts[RV.me] = {items}; status.textContent = "已儲存"; rerender(); })
+          .catch(e => { save.disabled = false; status.textContent = errText(e); });
+      });
+      rv.append(vs, ta, el("div", {class: "row"}, save, status));
+      Object.assign(f, {ta, paintBtns});
+    }
+    const list = el("ul", {class: "others"}); rv.append(list); f.list = list;
+    forms[k] = f;
+  }
+}
+function verdictStats(k) {
+  const out = {agree: 0, doubt: 0, seeds: 0, entries: []};
+  for (const [uid, doc] of Object.entries(RV.verdicts)) {
+    const e = doc.items?.[k];
+    if (!e || !(e.verdict || e.note)) continue;
+    if (out[e.verdict] != null) out[e.verdict]++;
+    out.entries.push([uid, e]);
+  }
+  out.entries.sort((a, b) => String(a[1].at).localeCompare(String(b[1].at)));
+  return out;
+}
+
+/* ---------- 6: overview table ---------- */
+const OV = {filter: "all"};
+const allKeys = [...iters.map(i => String(i.iter)), ...(D.next ? ["next"] : [])];
+const itemOf = k => k === "next" ? {...D.next, iter: "next"} : iters.find(i => String(i.iter) === k);
+function paintOverview() {
+  const tb = $("#ov-body"); tb.replaceChildren();
+  let shown = 0;
+  for (const k of allKeys) {
+    const it = itemOf(k), sm = checkSummary(it.checks), vs = verdictStats(k), th = RV.on ? threadsOf(k) : [];
+    const open = th.filter(r => !r.resolved).length;
+    const pass = OV.filter === "all" || (OV.filter === "doubt" && vs.doubt) || (OV.filter === "seeds" && vs.seeds)
+      || (OV.filter === "open" && open) || (OV.filter === "checks" && (sm.warn || sm.fail));
+    if (!pass) continue;
+    shown++;
+    const dec = k === "next" ? "next" : it.decision;
+    const num = (n, cls) => el("td", {class: "num" + (n ? " " + cls : "")}, RV.on ? String(n) : "—");
+    const tr = el("tr", {tabindex: 0, onclick: () => jump(k), onkeydown: e => { if (e.key === "Enter") jump(k); }},
+      el("td", {class: "mono"}, k),
+      el("td", {class: "kc-cell", text: keyText(it) || (it.kind === "baseline" ? "官方原始程式" : "")}),
+      el("td", {class: "num mono", text: it.val_acc != null ? pct(it.val_acc) : "—"}),
+      el("td", {}, el("span", {class: "pill " + dec, text: LABEL[dec] || dec})),
+      el("td", {}, el("span", {class: "ck-sum " + (sm.fail ? "fail" : sm.warn ? "warn" : "ok"), text: sm.fail ? `✗ ${sm.fail}` : sm.warn ? `! ${sm.warn}` : `✓ ${sm.pass}/${sm.total}`})),
+      num(vs.agree, "agree"), num(vs.doubt, "doubt"), num(vs.seeds, "seeds"),
+      el("td", {class: "num" + (open ? " doubt" : "")}, RV.on ? (th.length ? `${open} / ${th.length}` : "0") : "—"));
+    tb.append(tr);
+  }
+  if (!shown) tb.append(el("tr", {}, el("td", {colspan: "9", class: "muted small", text: "沒有符合篩選的輪次。"})));
+  $("#ov-seg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.f === OV.filter));
+}
+$("#ov-seg").addEventListener("click", e => { const b = e.target.closest("button[data-f]"); if (b) { OV.filter = b.dataset.f; paintOverview(); } });
+
+/* repaint everything that depends on review data */
+let painting = false, again = false;
+async function rerender() {
+  if (painting) { again = true; return; }
+  painting = true;
+  try {
+    if (RV.on) {
+      const uids = new Set([...Object.keys(RV.verdicts), ...Object.keys(RV.comments)]);
+      for (const v of Object.values(RV.res)) if (v?.by) uids.add(v.by);
+      RV.ps = uids.size ? await RV.user.profiles([...uids]) : {};
+      for (const e of DIFFS) decorate(e);
+      let openTotal = 0, people = new Set();
+      for (const [k, f] of Object.entries(forms)) {
+        const vs = verdictStats(k), th = threadsOf(k), open = th.filter(r => !r.resolved).length;
+        openTotal += open;
+        vs.entries.forEach(([u]) => people.add(u)); th.forEach(r => { people.add(r.uid); r.replies.forEach(c => people.add(c.uid)); });
+        f.list.replaceChildren(...vs.entries.map(([uid, e]) => {
+          const li = el("li");
+          li.append(el("span", {class: "who", text: nameOf(uid)}));
+          if (e.verdict && VERD[e.verdict]) li.append(el("span", {class: "vtag " + e.verdict, text: VERD[e.verdict]}));
+          if (e.note) li.append(document.createTextNode(e.note));
+          li.append(el("span", {class: "muted small", text: "  " + fmtT(e.at)}));
+          return li;
+        }));
+        if (!f.loaded && f.ta) { const m = RV.verdicts[RV.me]?.items?.[k]; if (m) { f.verdict = m.verdict || null; f.ta.value = m.note || ""; f.paintBtns(); } f.loaded = true; }
+        const card = cardEls[k]?.card;
+        const tc = card?.querySelector(".tab[data-id=diff] .tcount");
+        if (tc) tc.textContent = th.length ? ` · ${open ? open + " 則未解決" : th.length + " 則留言"}` : "";
+        const chip = document.querySelector(`.chip[data-iter="${k}"] .rc`);
+        if (chip) chip.textContent = (vs.entries.length + open) ? `💬${vs.entries.length + open}` : "";
+      }
+      $("#ov-status").textContent = `${people.size} 位 reviewer · ${openTotal} 則行內留言未解決`;
+    }
+    paintOverview();
+  } finally {
+    painting = false;
+    if (again) { again = false; rerender(); }
+  }
+}
+paintOverview();
+
 note.textContent = "Review 區：正在連線…";
 (async function review() {
   let db = null, user = null;
   try { [db, user] = await Promise.all([window.claude?.use?.("db") ?? null, window.claude?.use?.("user") ?? null]); } catch (e) {}
   if (!db || !user) {
-    note.textContent = "這份是離線版。每輪卡片下的 Review 區（同意 / 懷疑 / 要多跑 seed + 留言）只在 claude.ai 分享連結的版本出現。";
+    note.textContent = "這份是離線版：可以看圖、diff 和自動檢查。逐行留言、回覆、整輪判斷（同意 / 懷疑 / 要多跑 seed）只在 claude.ai 分享連結的版本出現。";
+    $("#ov-status").textContent = "離線版沒有 review 資料";
+    document.querySelectorAll("#ov-seg [data-rv]").forEach(b => b.hidden = true);
     return;
   }
-  const me = await user.id();
-  let all = {}; // uid -> {items:{iter:{verdict,note,at}}}
-  let mine = {items: {}};
-  let writing = Promise.resolve();
-  const canWrite = me != null;
-  note.textContent = canWrite ? "每輪卡片最下面可以留下你的判斷，所有看這頁的人都看得到。" : "你目前只能看別人的 review（需要登入且有互動權限才能留言）。";
+  RV.db = db; RV.user = user; RV.me = await user.id(); RV.canWrite = RV.me != null; RV.on = true;
+  document.body.classList.add("rv-on");
+  if (RV.canWrite) document.body.classList.add("rv-write");
+  note.textContent = RV.canWrite
+    ? "點 diff 的行號可以在那一行留言；每輪卡片最下面可以下整輪判斷。所有看這頁的人都看得到。"
+    : "你目前只能看別人的 review（需要登入且有互動權限才能留言）。";
+  buildVerdictForms();
+  let pending = 3;
   const loading = setTimeout(() => { note.textContent = "Review 資料讀取逾時，重新整理頁面再試一次。"; }, 10000);
-
-  const forms = {};
-  for (const [k, {review: rv}] of Object.entries(cardEls)) {
-    rv.hidden = false;
-    rv.append(el("div", {class: "eyebrow", text: "Review"}));
-    const f = {verdict: null};
-    if (canWrite) {
-      const vs = el("div", {class: "verdicts"});
-      for (const [v, l] of Object.entries(VERD)) vs.append(el("button", {class: "vbtn " + v, "data-v": v, text: l, onclick: () => { f.verdict = f.verdict === v ? null : v; paintBtns(); save.disabled = false; }}));
-      const ta = el("textarea", {placeholder: "理由或想追問的地方（選填）", maxlength: "2000"});
-      ta.addEventListener("input", () => save.disabled = false);
-      const status = el("span", {class: "muted small"});
-      const save = el("button", {class: "btn", text: "儲存", disabled: ""});
-      const paintBtns = () => vs.querySelectorAll(".vbtn").forEach(b => b.classList.toggle("on", b.dataset.v === f.verdict));
-      save.addEventListener("click", () => {
-        const entry = {verdict: f.verdict, note: ta.value.trim().slice(0, 2000), at: new Date().toISOString()};
-        const items = {...mine.items};
-        if (!entry.verdict && !entry.note) delete items[k]; else items[k] = entry;
-        save.disabled = true; status.textContent = "儲存中…";
-        writing = writing.then(() => db.doc("reviews/" + me).set({items, updatedAt: entry.at}))
-          .then(() => { mine = {items}; status.textContent = "已儲存"; })
-          .catch(e => { save.disabled = false; status.textContent = e?.code === "permission_denied" || e?.code === "not_granted" ? "你沒有寫入權限" : "沒存成功，再按一次"; });
-      });
-      rv.append(vs, ta, el("div", {class: "row"}, save, status));
-      Object.assign(f, {ta, paintBtns, status});
-    }
-    const list = el("ul", {class: "others"}); rv.append(list); f.list = list;
-    forms[k] = f;
-  }
-
-  let firstSnap = true;
-  async function paint() {
-    const ids = Object.keys(all);
-    const ps = ids.length ? await user.profiles(ids) : {};
-    const counts = {};
-    for (const [k, f] of Object.entries(forms)) {
-      const entries = ids.map(uid => [uid, all[uid]?.items?.[k]]).filter(([, e]) => e && (e.verdict || e.note))
-        .sort((a, b) => String(a[1].at).localeCompare(String(b[1].at)));
-      counts[k] = entries.length;
-      f.list.replaceChildren(...entries.map(([uid, e]) => {
-        const li = el("li");
-        li.append(el("span", {class: "who", text: (ps[uid]?.name || "某位 reviewer") + (uid === me ? "（你）" : "")}));
-        if (e.verdict && VERD[e.verdict]) li.append(el("span", {class: "vtag " + e.verdict, text: VERD[e.verdict]}));
-        if (e.note) li.append(document.createTextNode(e.note));
-        li.append(el("span", {class: "muted small", text: "  " + String(e.at || "").slice(0, 16).replace("T", " ")}));
-        return li;
-      }));
-      if (firstSnap && f.ta) { const m = mine.items[k]; if (m) { f.verdict = m.verdict || null; f.ta.value = m.note || ""; f.paintBtns(); } }
-    }
-    document.querySelectorAll(".chip").forEach(ch => { const n = counts[ch.dataset.iter]; ch.querySelector(".rc").textContent = n ? `💬${n}` : ""; });
-    firstSnap = false;
-  }
+  const got = () => { if (--pending <= 0) clearTimeout(loading); rerender(); };
+  const fail = () => { clearTimeout(loading); note.textContent = "Review 資料暫時讀不到，重新整理頁面再試一次。"; };
+  const seen = {reviews: false, comments: false, resolutions: false};
+  const once = name => { if (!seen[name]) { seen[name] = true; got(); } else rerender(); };
   db.collection("reviews").onSnapshot(snap => {
-    clearTimeout(loading);
-    all = {};
-    for (const d of snap.docs) { const v = d.data(); if (v && typeof v.items === "object" && v.items) all[d.id] = v; }
-    if (me && all[me] && firstSnap) mine = {items: {...all[me].items}};
-    paint();
-  }, () => { clearTimeout(loading); note.textContent = "Review 資料暫時讀不到，重新整理頁面再試一次。"; });
+    RV.verdicts = {};
+    for (const d of snap.docs) { const v = d.data(); if (v && v.items && typeof v.items === "object") RV.verdicts[d.id] = v; }
+    once("reviews");
+  }, fail);
+  db.collection("comments").onSnapshot(snap => {
+    RV.comments = {};
+    for (const d of snap.docs) { const v = d.data(); if (v && v.items && typeof v.items === "object") RV.comments[d.id] = v; }
+    once("comments");
+  }, fail);
+  db.collection("resolutions").onSnapshot(snap => {
+    RV.res = {};
+    for (const d of snap.docs) { const v = d.data(); if (v) RV.res[d.id] = v; }
+    once("resolutions");
+  }, fail);
 })();
 </script>
+

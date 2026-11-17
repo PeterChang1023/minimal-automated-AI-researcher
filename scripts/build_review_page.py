@@ -186,6 +186,97 @@ def key_changes(patch: str, old_src: str, new_src: str):
     return out
 
 
+# ---------- automatic checks: did a candidate touch anything that must stay fixed? ----------
+REPO = Path(__file__).resolve().parents[1]
+
+
+def _pinned_sha():
+    out = {}
+    for ln in read(REPO / "fmlbench_task" / "SHA256SUMS").splitlines():
+        parts = ln.split()
+        if len(parts) == 2:
+            out[parts[1]] = parts[0]
+    return out
+
+
+def _static_check(code: str):
+    try:
+        import sys
+        sys.path.insert(0, str(REPO))
+        from air.checks import static_check
+        return static_check(code)
+    except Exception as e:  # keep the page buildable without the package
+        return None
+
+
+def _split_line(stdout: str):
+    m = re.search(r"Agent train: \d+, Agent val: \d+.*", stdout)
+    return m.group(0).strip() if m else ""
+
+
+def run_checks(d: Path, rec: dict, run_budget: dict, base_info: dict):
+    """List of {name, status: ok|warn|fail|info, detail}. Everything comes from files in d."""
+    pins = _pinned_sha()
+    fp = rec.get("fingerprint") or {}
+    cfg = json.loads(read(d / "effective_config.json") or "{}")
+    eff, cand = cfg.get("effective_config") or {}, cfg.get("candidate_config") or {}
+    smoke = {}
+    for ln in read(d / "smoke.log").splitlines():
+        if ln.startswith("{"):
+            try: smoke = json.loads(ln)
+            except ValueError: pass
+    code = read(d / "algorithm.py")
+    out = []
+
+    def add(name, ok, detail, warn=False, info=False):
+        out.append({"name": name, "status": "info" if info else ("ok" if ok else ("warn" if warn else "fail")), "detail": detail})
+
+    want = pins.get("train_eval_baseline.py")
+    got = fp.get("eval_sha256")
+    add("評估程式沒被改", bool(want) and got == want,
+        f"train_eval_baseline.py SHA-256 {str(got)[:12]}… {'＝' if got == want else '≠'} 鎖定值 {str(want)[:12]}…")
+    want, got = pins.get("split_config.json"), fp.get("split_sha256")
+    sl = _split_line(read(d / "stdout.log"))
+    same_split = sl == base_info.get("split_line") and bool(sl)
+    add("資料切分沒被改", bool(want) and got == want and same_split,
+        f"split_config.json SHA-256 {'＝' if got == want else '≠'} 鎖定值；這輪實際切分「{sl or '找不到'}」"
+        + ("，和 baseline 相同" if same_split else "，和 baseline 不同"))
+    keys = ["pretrain_epochs", "linear_eval_epochs", "linear_lr", "linear_batch_size"]
+    bad = [k for k in keys if k in run_budget and eff.get(k) != run_budget[k]]
+    tried = [f"{k}={cand.get(k)}" for k in keys if k in cand and k in run_budget and cand.get(k) != run_budget[k]]
+    if bad:
+        add("訓練預算固定", False, "實際設定和預算不同：" + "、".join(f"{k}={eff.get(k)}" for k in bad))
+    elif tried:
+        add("訓練預算固定", False, "Gemini 想改 " + "、".join(tried) + "，已被程式覆蓋回預算值", warn=True)
+    else:
+        add("訓練預算固定", True, f"pretrain {eff.get('pretrain_epochs')} ep · linear eval {eff.get('linear_eval_epochs')} ep · linear_lr {eff.get('linear_lr')} · linear batch {eff.get('linear_batch_size')}")
+    mbs = run_budget.get("max_bs") or fp.get("max_batch_size")
+    bs = eff.get("batch_size")
+    add("Batch size 沒超過上限", bs is not None and mbs is not None and bs <= mbs, f"batch_size {bs}（上限 {mbs}）")
+    code_nc = "\n".join(l.split("#")[0] for l in code.splitlines())
+    has_opt = re.search(r"torch\.optim|optim\.(SGD|Adam\w*|LARS|LBFGS)|lr_scheduler", code_nc)
+    add("Optimizer 沒被換掉", not has_opt,
+        "algorithm.py 裡沒有 optimizer / scheduler（固定用官方程式的 SGD + cosine）" if not has_opt else f"algorithm.py 出現 `{has_opt.group(0)}`")
+    probs = _static_check(code) if code else None
+    rec_probs = rec.get("static_problems") or []
+    if probs is None:
+        add("靜態檢查（禁止的寫法）", not rec_probs, "；".join(rec_probs) or "loop 當時的檢查沒有問題（本機無法重跑 air.checks）")
+    else:
+        add("靜態檢查（禁止的寫法）", not probs and not rec_probs,
+            "沒有讀資料、讀測試集、連網、用預訓練權重、執行 shell 等寫法（重新跑 air/checks.py 確認）" if not probs and not rec_probs else "；".join(probs or rec_probs))
+    vi = json.loads(read(d / "val_info.json") or "{}")
+    v = ((vi.get("cifar100_ssl") or {}).get("final_info_dict") or {}).get("linear_eval_acc")
+    if rec.get("val_acc") is not None:
+        add("分數對得上原始輸出", v is not None and abs(v - rec["val_acc"]) < 1e-9,
+            f"record.json {rec['val_acc']:.4f}，官方程式輸出的 val_info.json {v if v is None else f'{v:.4f}'}")
+    n = smoke.get("n_params")
+    if n:
+        b = base_info.get("n_params")
+        delta = "" if not b or n == b else f"（比 baseline {'+' if n > b else '−'}{abs(n - b) / 1e6:.2f}M）"
+        add("模型參數量", True, f"{n / 1e6:.2f}M{delta or '（和 baseline 一樣）'}，含 projection head", info=True)
+    return out
+
+
 def collect(run_dir: Path, noise_pts: float):
     hist = [json.loads(l) for l in read(run_dir / "history.jsonl").splitlines() if l.strip()]
     cfg = json.loads(read(run_dir / "run_config.json") or "{}")
@@ -231,6 +322,15 @@ def collect(run_dir: Path, noise_pts: float):
             "diff_best": read(nd / "diff_vs_best.patch"), "diff_base": read(nd / "diff_vs_baseline.patch"),
             "prompt_user": read(nd / "prompt_user.txt"),
         }
+    # automatic checks
+    run_budget = cfg.get("budget") or {}
+    base_dir = run_dir / "iter_000"
+    base_smoke = next((json.loads(l) for l in read(base_dir / "smoke.log").splitlines() if l.startswith("{")), {})
+    base_info = {"split_line": _split_line(read(base_dir / "stdout.log")), "n_params": base_smoke.get("n_params")}
+    for it in iters:
+        d = run_dir / f"iter_{it['iter']:03d}"
+        rec = json.loads(read(d / "record.json") or "{}")
+        it["checks"] = run_checks(d, rec, run_budget, base_info)
     # key changes vs the parent (best at the time); docstring/comment edits ignored
     src = lambda k: read(run_dir / f"iter_{int(k):03d}" / "algorithm.py") if k is not None else ""
     for it in iters:
@@ -238,6 +338,17 @@ def collect(run_dir: Path, noise_pts: float):
             it["key_changes"] = key_changes(it["diff_best"], src(it["parent_iter"]), src(it["iter"]))
     if nxt:
         best_k = max((i for i in iters if i["decision"] in ("accepted", "baseline")), key=lambda i: i["iter"])["iter"]
+        code = read(nd / "algorithm.py")
+        code_nc = "\n".join(l.split("#")[0] for l in code.splitlines())
+        probs = _static_check(code)
+        has_opt = re.search(r"torch\.optim|optim\.(SGD|Adam\w*|LARS|LBFGS)|lr_scheduler", code_nc)
+        nxt["checks"] = [
+            {"name": "Optimizer 沒被換掉", "status": "fail" if has_opt else "ok",
+             "detail": f"algorithm.py 出現 `{has_opt.group(0)}`" if has_opt else "algorithm.py 裡沒有 optimizer / scheduler"},
+            {"name": "靜態檢查（禁止的寫法）", "status": "info" if probs is None else ("fail" if probs else "ok"),
+             "detail": "本機無法重跑 air.checks" if probs is None else ("；".join(probs) or "沒有禁止的寫法（重新跑 air/checks.py 確認）")},
+            {"name": "其他檢查", "status": "info", "detail": "這個提案還沒執行，評估程式、切分、分數的檢查要等跑完才有"},
+        ]
         nxt["key_changes"] = key_changes(nxt["diff_best"], src(best_k), read(nd / "algorithm.py"))
     # feedback chain: iteration k's entry inside the NEXT prompt (k+1, or next_proposal after the last)
     by_k = {it["iter"]: it for it in iters}
