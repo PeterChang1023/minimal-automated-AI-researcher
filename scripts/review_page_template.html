@@ -127,6 +127,17 @@ table.diff tr.thr td,table.diff tr.composer td{background:var(--surface);padding
 button.link{background:none;border:0;padding:0;color:var(--base);font:inherit;font-size:12.5px;cursor:pointer}
 .reply-ta{margin-top:6px;min-height:50px}
 .tcount{color:var(--rej);font-size:12px}
+.tog{background:none;border:1px solid var(--line);border-radius:6px;padding:1px 8px;font:500 12px "IBM Plex Sans","Noto Sans TC",sans-serif;color:var(--muted);cursor:pointer;display:inline-flex;gap:4px;align-items:center;align-self:center}
+.card-h{cursor:pointer}
+.card:not(.open) .card-h{border-bottom:0}
+.card-peek{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 18px 12px}
+.card.open .card-peek{padding-top:10px;border-bottom:1px solid var(--line)}
+.chip.all{margin-left:auto;font-family:"IBM Plex Sans","Noto Sans TC",sans-serif}
+.howto{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 4px;padding:0;list-style:none;counter-reset:s}
+.howto li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 42px;position:relative;font-size:13.5px;line-height:1.55;counter-increment:s}
+.howto li::before{content:counter(s);position:absolute;left:12px;top:10px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);font:600 12px/20px "IBM Plex Mono",monospace;text-align:center}
+.howto b{display:block;font-size:14px}
+@media (max-width:760px){.howto{grid-template-columns:minmax(0,1fr)}}
 .fb{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--sunk);border-left:3px solid var(--line);padding:4px 10px;border-radius:0 6px 6px 0}
 .fb.accepted{border-left-color:var(--acc)} .fb.rejected{border-left-color:var(--rej)} .fb.baseline{border-left-color:var(--base)}
 .tabs{display:flex;gap:2px;margin-top:14px;border-bottom:1px solid var(--line);overflow-x:auto}
@@ -184,7 +195,31 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
     <p class="lede" id="lede"></p>
     <div class="meta" id="meta"></div>
     <div class="stats" id="stats"></div>
+    <ol class="howto" aria-label="怎麼讀這頁">
+      <li><b>先看「Review 總覽」表</b>每輪改了什麼、分數多少、自動檢查有沒有過。點任一列會跳到那一輪。</li>
+      <li><b>點開那一輪的卡片</b>看 Gemini 的假設、程式 diff、loss 曲線，以及這輪結果怎麼回饋給下一輪。</li>
+      <li><b>有疑問就留言</b>在 diff 點行號針對那一行留言，或在卡片最下面選同意 / 懷疑 / 要多跑 seed。<span class="muted">（留言只在分享連結版）</span></li>
+    </ol>
   </header>
+
+  <div class="note" id="review-note"></div>
+
+  <section class="panel" id="overview">
+    <div class="ov-top">
+      <div><h2>Review 總覽</h2><p class="sub" id="ov-status"></p></div>
+      <div class="seg" id="ov-seg">
+        <button data-f="all">全部</button>
+        <button data-f="doubt" data-rv>有人懷疑</button>
+        <button data-f="seeds" data-rv>要多跑 seed</button>
+        <button data-f="open" data-rv>有未解決留言</button>
+        <button data-f="checks">檢查沒通過</button>
+      </div>
+    </div>
+    <div class="ov-wrap"><table class="ov">
+      <thead><tr><th>iter</th><th>關鍵改動</th><th class="num">val acc</th><th>判定</th><th>自動檢查</th><th class="num">同意</th><th class="num">懷疑</th><th class="num">多跑 seed</th><th class="num">行內留言<br><span class="muted">未解決/全部</span></th></tr></thead>
+      <tbody id="ov-body"></tbody>
+    </table></div>
+  </section>
 
   <div class="grid2">
     <section class="panel">
@@ -206,24 +241,6 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
     </section>
   </div>
 
-  <div class="note" id="review-note"></div>
-
-  <section class="panel" id="overview">
-    <div class="ov-top">
-      <div><h2>Review 總覽</h2><p class="sub" id="ov-status"></p></div>
-      <div class="seg" id="ov-seg">
-        <button data-f="all">全部</button>
-        <button data-f="doubt" data-rv>有人懷疑</button>
-        <button data-f="seeds" data-rv>要多跑 seed</button>
-        <button data-f="open" data-rv>有未解決留言</button>
-        <button data-f="checks">檢查沒通過</button>
-      </div>
-    </div>
-    <div class="ov-wrap"><table class="ov">
-      <thead><tr><th>iter</th><th>關鍵改動</th><th class="num">val acc</th><th>判定</th><th>自動檢查</th><th class="num">同意</th><th class="num">懷疑</th><th class="num">多跑 seed</th><th class="num">行內留言<br><span class="muted">未解決/全部</span></th></tr></thead>
-      <tbody id="ov-body"></tbody>
-    </table></div>
-  </section>
 
   <nav class="chips" id="chips" aria-label="iterations"></nav>
   <main id="cards"></main>
@@ -418,9 +435,18 @@ const chips = $("#chips");
 iters.forEach(it => chips.append(el("a", {class: "chip", href: "#iter-" + it.iter, "data-iter": it.iter},
   el("span", {class: "d " + (it.status !== "ok" && it.kind !== "baseline" ? "failed" : it.decision)}), String(it.iter), el("span", {class: "rc"}))));
 if (D.next) chips.append(el("a", {class: "chip", href: "#iter-next", "data-iter": "next"}, el("span", {class: "d next"}), "next", el("span", {class: "rc"})));
+chips.addEventListener("click", e => { const a = e.target.closest("a.chip"); if (a) { e.preventDefault(); jump(a.dataset.iter); } });
+const allBtn = el("button", {class: "chip all", text: "全部展開"});
+allBtn.addEventListener("click", () => {
+  const open = allBtn.textContent === "全部展開";
+  Object.values(cardEls).forEach(c => c.setOpen(open));
+  allBtn.textContent = open ? "全部收合" : "全部展開";
+});
+chips.append(allBtn);
 
 function jump(k) {
   const c = document.getElementById("iter-" + k); if (!c) return;
+  cardEls[k]?.setOpen?.(true);
   try { history.replaceState(null, "", "#iter-" + k); } catch (e) { location.hash = "iter-" + k; }
   c.scrollIntoView({behavior: "smooth", block: "start"});
   document.querySelectorAll(".card.target").forEach(x => x.classList.remove("target"));
@@ -596,11 +622,17 @@ function card(it) {
   }
   const right = k === "next" ? "未執行（只產生提案）" : [it.parent_iter != null ? `從 iter ${it.parent_iter} 改` : null, it.seconds ? `${(it.seconds / 60).toFixed(1)} 分鐘` : null, it.time ? it.time.slice(5, 16).replace("T", " ") : null].filter(Boolean).join(" · ");
   h.append(el("span", {class: "right", text: right}));
+  const tog = el("button", {class: "tog", "aria-expanded": "false", title: "展開 / 收合"}, el("span", {class: "car", text: "▸"}), el("span", {class: "tl", text: "展開"}));
+  h.prepend(tog);
   c.append(h);
+  const peek = el("div", {class: "card-peek"});
+  if (it.key_changes && it.key_changes.length) peek.append(keyChips(it.key_changes));
+  else if (it.kind === "baseline") peek.append(el("span", {class: "muted small", text: "官方原始 Barlow Twins 程式，沒有改動"}));
+  if (it.checks && it.checks.length) { const sm = checkSummary(it.checks); peek.append(el("span", {class: "ck-sum " + (sm.fail ? "fail" : sm.warn ? "warn" : "ok"), text: sm.fail ? `檢查 ✗ ${sm.fail}` : sm.warn ? `檢查 ! ${sm.warn}` : `檢查 ✓ ${sm.pass}/${sm.total}`})); }
+  c.append(peek);
   const body = el("div", {class: "card-b"});
   const kv = el("dl", {class: "kv"});
   const row = (t, v, cls) => { if (v) kv.append(el("dt", {text: t}), el("dd", {class: cls || "", text: v})); };
-  if (it.key_changes && it.key_changes.length) kv.append(el("dt", {text: "關鍵改動"}), el("dd", {}, keyChips(it.key_changes)));
   row("改了什麼", it.change_summary && it.change_summary !== "none" ? it.change_summary : (it.kind === "baseline" ? "沒改（官方原始 Barlow Twins）" : ""));
   row("假設", it.kind === "baseline" ? "" : it.hypothesis);
   row("理由", it.rationale);
@@ -621,7 +653,10 @@ function card(it) {
   sel(tabsDef[0][0]);
   const rv = el("div", {class: "review", hidden: ""}); body.append(rv);
   c.append(body);
-  cardEls[k] = {card: c, review: rv, it};
+  const setOpen = open => { body.hidden = !open; c.classList.toggle("open", open); tog.setAttribute("aria-expanded", open); tog.querySelector(".car").textContent = open ? "▾" : "▸"; tog.querySelector(".tl").textContent = open ? "收合" : "展開"; };
+  h.addEventListener("click", e => { if (e.target.closest("a,textarea,input") ) return; setOpen(body.hidden); });
+  setOpen(it.decision === "accepted");
+  cardEls[k] = {card: c, review: rv, it, setOpen};
   return c;
 }
 iters.forEach(it => main.append(card(it)));
