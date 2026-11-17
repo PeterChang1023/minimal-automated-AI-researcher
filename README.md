@@ -1,9 +1,12 @@
 # Minimal automated AI researcher
 
-> **🔎 [Open the review page →](https://htmlpreview.github.io/?https://github.com/PeterChang1023/minimal-automated-AI-researcher/blob/main/runs/flash35-e130-10iter/viz/review.html)**
-> Every iteration of the main run (130 epochs, 10 iterations, val acc 47.27% → 57.73%) on one page:
-> what Gemini changed, the code diff, loss curve, automatic integrity checks, and a one-line verdict.
-> ([source](runs/flash35-e130-10iter/viz/review.html) · rebuild with `python scripts/build_review_page.py runs/flash35-e130-10iter`)
+> **🔎 Review page — every iteration of the main run on one page**
+> (130 epochs, 10 iterations, val acc 47.27% → 57.73%: what Gemini changed, code diff, loss curve, automatic integrity checks, one-line verdict)
+>
+> - **[Open in browser (GitHub Pages)](https://peterchang1023.github.io/minimal-automated-AI-researcher/)** · mirror: [raw.githack](https://raw.githack.com/PeterChang1023/minimal-automated-AI-researcher/main/docs/index.html)
+> - **[Review version with comments (claude.ai)](https://claude.ai/artifact/GkiyZuzH6zFeeQbPqPShpX)** — line comments, replies, and agree / doubt / more-seeds verdicts per iteration
+> - Source: [`docs/index.html`](docs/index.html) (same file as [`runs/flash35-e130-10iter/viz/review.html`](runs/flash35-e130-10iter/viz/review.html)); rebuild with
+>   `python scripts/build_review_page.py runs/flash35-e130-10iter --out docs/index.html`
 
 ## How it works in one minute
 
@@ -66,7 +69,7 @@ best **57.73 %** (iter 10) after 10 real `gemini-3.5-flash` proposals (3 accepte
 validation split, seed 42. Details, per-iteration table and the honest reading are in
 [§4c](#4c-main-result-full-budget-loop-runsflash35-e130-10iter-hinton-2026-11-14).
 Click-through trace: [`runs/flash35-e130-10iter/viz/trace.html`](runs/flash35-e130-10iter/viz/trace.html).
-Review page (interactive chart, ±1.2 pt seed-noise band, lineage graph, side-by-side diffs with extracted key changes, automatic integrity checks per iteration, loss curves, feedback chain): [open in browser](https://htmlpreview.github.io/?https://github.com/PeterChang1023/minimal-automated-AI-researcher/blob/main/runs/flash35-e130-10iter/viz/review.html) · [source](runs/flash35-e130-10iter/viz/review.html), built by `python scripts/build_review_page.py runs/flash35-e130-10iter`.
+Review page (interactive chart, ±1.2 pt seed-noise band, lineage graph, side-by-side diffs with extracted key changes, automatic integrity checks per iteration, loss curves, feedback chain): [open in browser](https://peterchang1023.github.io/minimal-automated-AI-researcher/) · [source](runs/flash35-e130-10iter/viz/review.html), built by `python scripts/build_review_page.py runs/flash35-e130-10iter`.
 
 Before that, a shortened **50-epoch pilot run** (`runs/flash35-clean`, [§4a](#4a-50-epoch-pilot-run-runsflash35-clean-hinton-2026-11-14))
 went 26.75 % → 54.19 %; its best code, re-run at 130 epochs, reaches 59.45 % (vs 47.04 %). That code combines three
