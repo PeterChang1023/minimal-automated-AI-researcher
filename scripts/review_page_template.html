@@ -1,4 +1,4 @@
-<title>Loop Review · __RUN_NAME__</title>
+<title>Gemini 改程式實驗 Review</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
@@ -38,6 +38,7 @@ h2{font-size:18px;font-weight:600}
 a{color:var(--base)}
 header.top{padding-block:28px 12px}
 .meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:13px;color:var(--muted)}
+.lede{max-width:72ch;margin:10px 0 0;color:var(--muted);font-size:15px}
 .cmd{margin-top:10px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12.5px;overflow-x:auto;white-space:pre;color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0 8px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
@@ -178,10 +179,10 @@ footer{margin-top:28px;font-size:12.5px;color:var(--muted)}
 
 <div class="wrap">
   <header class="top">
-    <div class="eyebrow">Automated research loop · review</div>
-    <h1 id="ttl"></h1>
+    <div class="eyebrow" id="eyebrow" style="text-transform:none"></div>
+    <h1>讓 Gemini 自動改 SSL 訓練程式：每一輪改了什麼、有沒有變好</h1>
+    <p class="lede" id="lede"></p>
     <div class="meta" id="meta"></div>
-    <div class="cmd mono" id="cmd"></div>
     <div class="stats" id="stats"></div>
   </header>
 
@@ -273,7 +274,7 @@ document.querySelectorAll(".np").forEach(n => n.textContent = noise);
 document.querySelectorAll(".rn").forEach(n => n.textContent = D.run);
 
 /* ---------- header ---------- */
-$("#ttl").textContent = D.run;
+$("#eyebrow").textContent = "實驗紀錄 Review · run " + D.run;
 const base = iters.find(i => i.kind === "baseline");
 let best = base, bestAfter = [];
 for (const it of iters) { if (it.decision === "accepted" || it === base) best = it; bestAfter.push(best); }
@@ -285,7 +286,7 @@ $("#meta").append(
   el("span", {text: `開始 ${String(D.created || "").replace("T", " ").slice(0, 16)}`}),
   el("span", {text: `pretrain ${b.pretrain_epochs ?? "?"} epochs · linear eval ${b.linear_eval_epochs ?? "?"} epochs`}),
   el("span", {text: `LLM ${iters.find(i => i.model)?.model || "?"}`}));
-$("#cmd").textContent = "python -m air.loop " + D.argv.split(" ").slice(1).join(" ");
+$("#lede").textContent = `任務是 CIFAR-100 自監督學習（FML-bench，官方 baseline 為 Barlow Twins）。每一輪由 Gemini 讀過去的結果、提出一個程式改動，程式用固定的 ${b.pretrain_epochs ?? "?"} epoch 預算訓練並量 val acc，比目前最佳高才接受。${iters.length - 1} 輪下來從 ${pct(base.val_acc)}% 提升到 ${pct(best.val_acc)}%。`;
 const stat = (v, l) => el("div", {class: "stat"}, el("b", {text: v}), el("span", {text: l}));
 $("#stats").append(
   stat(pct(base.val_acc) + "%", "baseline val acc"),
