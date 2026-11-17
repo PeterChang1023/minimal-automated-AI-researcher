@@ -80,7 +80,9 @@ class GeminiBackend(Backend):
                     msg = body
                 last = f"HTTP {e.code}: {msg[:1500]}"
                 # 'limit: 0' = this model has no quota on this key (e.g. free tier); retrying cannot help
-                if e.code not in (429, 500, 502, 503, 504) or "limit: 0" in msg:
+                # 'per day' = daily free-tier quota used up; it resets at midnight Pacific, so stop now
+                # instead of burning more retries (which also count as requests)
+                if e.code not in (429, 500, 502, 503, 504) or "limit: 0" in msg or "per day" in msg.lower():
                     raise LLMError(last) from e
             except (urllib.error.URLError, TimeoutError, LLMError) as e:
                 last = str(e)
