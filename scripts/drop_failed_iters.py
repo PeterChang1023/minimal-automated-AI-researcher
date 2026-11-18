@@ -8,8 +8,8 @@ Removes: their records in history.jsonl, their iter_XXX/ folders, the next_propo
 folder (re-created at the end of the next run), and their lines in runs/<run>.log.
 Iteration numbers of the remaining experiments are NOT changed (Gemini's rationales cite
 them), so numbering keeps gaps. A full copy is first written to ~/air_backups/<run>_<time>/ (outside the repo).
-Only llm_error iterations are removed; experiments that ran (even if they failed or
-crashed) are kept.
+By default only llm_error iterations are removed; pass --status llm_error,timeout to also
+remove runs killed by the time limit (e.g. before resuming with a larger --timeout-min).
 """
 import argparse
 import json
@@ -21,23 +21,31 @@ from pathlib import Path
 ap = argparse.ArgumentParser()
 ap.add_argument("run_dir")
 ap.add_argument("--apply", action="store_true")
+ap.add_argument("--status", default="llm_error",
+                help="comma-separated statuses to remove (default llm_error; e.g. llm_error,timeout)")
 a = ap.parse_args()
 run = Path(a.run_dir).resolve()
 log = run.parent / f"{run.name}.log"
 hist = [json.loads(l) for l in (run / "history.jsonl").read_text().splitlines() if l.strip()]
-bad = sorted(h["iter"] for h in hist if h.get("status") == "llm_error")
+drop = set(a.status.split(","))
+bad = sorted(h["iter"] for h in hist if h.get("kind") == "candidate" and h.get("status") in drop)
 keep = [h for h in hist if h["iter"] not in bad]
-print(f"llm_error iters to remove: {bad}; kept iters: {[h['iter'] for h in keep]}")
+print(f"{a.status} iters to remove: {bad}; kept iters: {[h['iter'] for h in keep]}")
 
 log_lines = log.read_text().splitlines(True) if log.exists() else []
-out, skip = [], False
+out, skip, tail = [], False, False
 for line in log_lines:
     m = re.search(r"\] iter (\d+): proposing", line)
     if m:
-        skip = int(m.group(1)) in bad
+        skip, tail = int(m.group(1)) in bad, False
+    if tail:  # multi-line error tail printed after a removed iteration's result line
+        if re.match(r"^\[\d{4}-", line):
+            tail = False
+        else:
+            continue
     if skip:
         if re.search(r"\] iter (\d+) -> ", line):
-            skip = False
+            skip, tail = False, True
         continue
     if "consecutive failures; stopping" in line or "next proposal written to" in line or line.startswith("[harness] done."):
         continue
