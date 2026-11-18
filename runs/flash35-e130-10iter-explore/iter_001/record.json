@@ -1,0 +1,691 @@
+{
+  "iter": 1,
+  "kind": "candidate",
+  "time": "2026-11-18T00:31:12+08:00",
+  "parent_iter": 0,
+  "parent_val_acc": 0.467725932598114,
+  "llm": {
+    "backend": "gemini",
+    "model": "gemini-3.5-flash",
+    "seconds": 154.6
+  },
+  "fingerprint": {
+    "budget": {
+      "pretrain_epochs": 130,
+      "linear_eval_epochs": 100,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    },
+    "eval_sha256": "6a4f78b42b40da3b9c39b6b5e4db587372623dba7b20f1b95ee64175a2a1d682",
+    "split_sha256": "e5f83281234a2ffa594497fa6e42c38bc3cb7a326b846233c2774550128a7970",
+    "max_batch_size": 512
+  },
+  "hypothesis": "Replacing Barlow Twins loss with VICReg (Variance-Invariance-Covariance Regularization) and tuning augmentations for 32x32 resolution (replacing heavy Gaussian blur with mild solarization) will prevent feature collapse more effectively and accelerate representation learning under a 130-epoch budget.",
+  "rationale": "In short pretraining budgets (130 epochs) on 32x32 CIFAR images, Barlow Twins' batch-normalized cross-correlation with fixed off-diagonal penalty (0.005) can suffer from slow feature decorrelation. VICReg explicitly enforces feature variance (std >= 1 per dim across batch) and decorrelation without batch normalization on projections, leading to faster convergence. Furthermore, standard Gaussian blur (kernel 3, sigma 2.0) on 32x32 images destroys critical fine-grained visual details; removing heavy blur and adding RandomSolarize is known to substantially benefit CIFAR SSL.",
+  "expected_effect": "Improve linear probe top-1 accuracy over the 0.4677 baseline by 3-6 percentage points due to faster representation learning and better preservation of 32x32 image features.",
+  "change_summary": "Implemented VICReg objective in BarlowTwinsLoss (sim_coeff=25, std_coeff=25, cov_coeff=1); updated augmentations for 32x32 images by replacing GaussianBlur with RandomSolarize; adjusted pretrain LR to 0.3.",
+  "change_type": "structural",
+  "direction": "A",
+  "plateau_rule_active": false,
+  "static_problems": [],
+  "status": "ok",
+  "val_acc": 0.012909633107483387,
+  "seconds": 909.8,
+  "smoke_seconds": 2.3,
+  "losses": [],
+  "loss_curve": [
+    {
+      "epoch": 1,
+      "loss": NaN,
+      "elapsed_s": 7.2
+    },
+    {
+      "epoch": 2,
+      "loss": NaN,
+      "elapsed_s": 13.9
+    },
+    {
+      "epoch": 3,
+      "loss": NaN,
+      "elapsed_s": 20.6
+    },
+    {
+      "epoch": 4,
+      "loss": NaN,
+      "elapsed_s": 27.3
+    },
+    {
+      "epoch": 5,
+      "loss": NaN,
+      "elapsed_s": 34.0
+    },
+    {
+      "epoch": 6,
+      "loss": NaN,
+      "elapsed_s": 40.8
+    },
+    {
+      "epoch": 7,
+      "loss": NaN,
+      "elapsed_s": 47.5
+    },
+    {
+      "epoch": 8,
+      "loss": NaN,
+      "elapsed_s": 54.2
+    },
+    {
+      "epoch": 9,
+      "loss": NaN,
+      "elapsed_s": 61.0
+    },
+    {
+      "epoch": 10,
+      "loss": NaN,
+      "elapsed_s": 67.7
+    },
+    {
+      "epoch": 11,
+      "loss": NaN,
+      "elapsed_s": 74.5
+    },
+    {
+      "epoch": 12,
+      "loss": NaN,
+      "elapsed_s": 81.2
+    },
+    {
+      "epoch": 13,
+      "loss": NaN,
+      "elapsed_s": 87.9
+    },
+    {
+      "epoch": 14,
+      "loss": NaN,
+      "elapsed_s": 94.6
+    },
+    {
+      "epoch": 15,
+      "loss": NaN,
+      "elapsed_s": 101.4
+    },
+    {
+      "epoch": 16,
+      "loss": NaN,
+      "elapsed_s": 108.1
+    },
+    {
+      "epoch": 17,
+      "loss": NaN,
+      "elapsed_s": 114.9
+    },
+    {
+      "epoch": 18,
+      "loss": NaN,
+      "elapsed_s": 121.6
+    },
+    {
+      "epoch": 19,
+      "loss": NaN,
+      "elapsed_s": 128.3
+    },
+    {
+      "epoch": 20,
+      "loss": NaN,
+      "elapsed_s": 135.0
+    },
+    {
+      "epoch": 21,
+      "loss": NaN,
+      "elapsed_s": 141.8
+    },
+    {
+      "epoch": 22,
+      "loss": NaN,
+      "elapsed_s": 148.5
+    },
+    {
+      "epoch": 23,
+      "loss": NaN,
+      "elapsed_s": 155.3
+    },
+    {
+      "epoch": 24,
+      "loss": NaN,
+      "elapsed_s": 162.1
+    },
+    {
+      "epoch": 25,
+      "loss": NaN,
+      "elapsed_s": 168.8
+    },
+    {
+      "epoch": 26,
+      "loss": NaN,
+      "elapsed_s": 175.6
+    },
+    {
+      "epoch": 27,
+      "loss": NaN,
+      "elapsed_s": 182.5
+    },
+    {
+      "epoch": 28,
+      "loss": NaN,
+      "elapsed_s": 189.3
+    },
+    {
+      "epoch": 29,
+      "loss": NaN,
+      "elapsed_s": 196.2
+    },
+    {
+      "epoch": 30,
+      "loss": NaN,
+      "elapsed_s": 202.9
+    },
+    {
+      "epoch": 31,
+      "loss": NaN,
+      "elapsed_s": 209.7
+    },
+    {
+      "epoch": 32,
+      "loss": NaN,
+      "elapsed_s": 216.4
+    },
+    {
+      "epoch": 33,
+      "loss": NaN,
+      "elapsed_s": 223.1
+    },
+    {
+      "epoch": 34,
+      "loss": NaN,
+      "elapsed_s": 229.9
+    },
+    {
+      "epoch": 35,
+      "loss": NaN,
+      "elapsed_s": 236.6
+    },
+    {
+      "epoch": 36,
+      "loss": NaN,
+      "elapsed_s": 243.4
+    },
+    {
+      "epoch": 37,
+      "loss": NaN,
+      "elapsed_s": 250.1
+    },
+    {
+      "epoch": 38,
+      "loss": NaN,
+      "elapsed_s": 256.9
+    },
+    {
+      "epoch": 39,
+      "loss": NaN,
+      "elapsed_s": 263.6
+    },
+    {
+      "epoch": 40,
+      "loss": NaN,
+      "elapsed_s": 270.3
+    },
+    {
+      "epoch": 41,
+      "loss": NaN,
+      "elapsed_s": 277.1
+    },
+    {
+      "epoch": 42,
+      "loss": NaN,
+      "elapsed_s": 283.8
+    },
+    {
+      "epoch": 43,
+      "loss": NaN,
+      "elapsed_s": 290.6
+    },
+    {
+      "epoch": 44,
+      "loss": NaN,
+      "elapsed_s": 297.3
+    },
+    {
+      "epoch": 45,
+      "loss": NaN,
+      "elapsed_s": 304.1
+    },
+    {
+      "epoch": 46,
+      "loss": NaN,
+      "elapsed_s": 310.8
+    },
+    {
+      "epoch": 47,
+      "loss": NaN,
+      "elapsed_s": 317.6
+    },
+    {
+      "epoch": 48,
+      "loss": NaN,
+      "elapsed_s": 324.3
+    },
+    {
+      "epoch": 49,
+      "loss": NaN,
+      "elapsed_s": 331.1
+    },
+    {
+      "epoch": 50,
+      "loss": NaN,
+      "elapsed_s": 337.8
+    },
+    {
+      "epoch": 51,
+      "loss": NaN,
+      "elapsed_s": 344.6
+    },
+    {
+      "epoch": 52,
+      "loss": NaN,
+      "elapsed_s": 351.4
+    },
+    {
+      "epoch": 53,
+      "loss": NaN,
+      "elapsed_s": 358.1
+    },
+    {
+      "epoch": 54,
+      "loss": NaN,
+      "elapsed_s": 364.8
+    },
+    {
+      "epoch": 55,
+      "loss": NaN,
+      "elapsed_s": 371.6
+    },
+    {
+      "epoch": 56,
+      "loss": NaN,
+      "elapsed_s": 378.3
+    },
+    {
+      "epoch": 57,
+      "loss": NaN,
+      "elapsed_s": 385.1
+    },
+    {
+      "epoch": 58,
+      "loss": NaN,
+      "elapsed_s": 391.8
+    },
+    {
+      "epoch": 59,
+      "loss": NaN,
+      "elapsed_s": 398.5
+    },
+    {
+      "epoch": 60,
+      "loss": NaN,
+      "elapsed_s": 405.2
+    },
+    {
+      "epoch": 61,
+      "loss": NaN,
+      "elapsed_s": 412.0
+    },
+    {
+      "epoch": 62,
+      "loss": NaN,
+      "elapsed_s": 418.8
+    },
+    {
+      "epoch": 63,
+      "loss": NaN,
+      "elapsed_s": 425.5
+    },
+    {
+      "epoch": 64,
+      "loss": NaN,
+      "elapsed_s": 432.2
+    },
+    {
+      "epoch": 65,
+      "loss": NaN,
+      "elapsed_s": 439.0
+    },
+    {
+      "epoch": 66,
+      "loss": NaN,
+      "elapsed_s": 445.7
+    },
+    {
+      "epoch": 67,
+      "loss": NaN,
+      "elapsed_s": 452.5
+    },
+    {
+      "epoch": 68,
+      "loss": NaN,
+      "elapsed_s": 459.2
+    },
+    {
+      "epoch": 69,
+      "loss": NaN,
+      "elapsed_s": 466.0
+    },
+    {
+      "epoch": 70,
+      "loss": NaN,
+      "elapsed_s": 472.8
+    },
+    {
+      "epoch": 71,
+      "loss": NaN,
+      "elapsed_s": 479.5
+    },
+    {
+      "epoch": 72,
+      "loss": NaN,
+      "elapsed_s": 486.3
+    },
+    {
+      "epoch": 73,
+      "loss": NaN,
+      "elapsed_s": 493.0
+    },
+    {
+      "epoch": 74,
+      "loss": NaN,
+      "elapsed_s": 499.7
+    },
+    {
+      "epoch": 75,
+      "loss": NaN,
+      "elapsed_s": 506.5
+    },
+    {
+      "epoch": 76,
+      "loss": NaN,
+      "elapsed_s": 513.3
+    },
+    {
+      "epoch": 77,
+      "loss": NaN,
+      "elapsed_s": 520.0
+    },
+    {
+      "epoch": 78,
+      "loss": NaN,
+      "elapsed_s": 526.7
+    },
+    {
+      "epoch": 79,
+      "loss": NaN,
+      "elapsed_s": 533.4
+    },
+    {
+      "epoch": 80,
+      "loss": NaN,
+      "elapsed_s": 540.2
+    },
+    {
+      "epoch": 81,
+      "loss": NaN,
+      "elapsed_s": 546.9
+    },
+    {
+      "epoch": 82,
+      "loss": NaN,
+      "elapsed_s": 553.7
+    },
+    {
+      "epoch": 83,
+      "loss": NaN,
+      "elapsed_s": 560.5
+    },
+    {
+      "epoch": 84,
+      "loss": NaN,
+      "elapsed_s": 567.2
+    },
+    {
+      "epoch": 85,
+      "loss": NaN,
+      "elapsed_s": 574.0
+    },
+    {
+      "epoch": 86,
+      "loss": NaN,
+      "elapsed_s": 580.8
+    },
+    {
+      "epoch": 87,
+      "loss": NaN,
+      "elapsed_s": 587.5
+    },
+    {
+      "epoch": 88,
+      "loss": NaN,
+      "elapsed_s": 594.2
+    },
+    {
+      "epoch": 89,
+      "loss": NaN,
+      "elapsed_s": 601.0
+    },
+    {
+      "epoch": 90,
+      "loss": NaN,
+      "elapsed_s": 607.7
+    },
+    {
+      "epoch": 91,
+      "loss": NaN,
+      "elapsed_s": 614.5
+    },
+    {
+      "epoch": 92,
+      "loss": NaN,
+      "elapsed_s": 621.3
+    },
+    {
+      "epoch": 93,
+      "loss": NaN,
+      "elapsed_s": 628.0
+    },
+    {
+      "epoch": 94,
+      "loss": NaN,
+      "elapsed_s": 634.8
+    },
+    {
+      "epoch": 95,
+      "loss": NaN,
+      "elapsed_s": 641.5
+    },
+    {
+      "epoch": 96,
+      "loss": NaN,
+      "elapsed_s": 648.3
+    },
+    {
+      "epoch": 97,
+      "loss": NaN,
+      "elapsed_s": 655.0
+    },
+    {
+      "epoch": 98,
+      "loss": NaN,
+      "elapsed_s": 661.7
+    },
+    {
+      "epoch": 99,
+      "loss": NaN,
+      "elapsed_s": 668.4
+    },
+    {
+      "epoch": 100,
+      "loss": NaN,
+      "elapsed_s": 675.2
+    },
+    {
+      "epoch": 101,
+      "loss": NaN,
+      "elapsed_s": 682.0
+    },
+    {
+      "epoch": 102,
+      "loss": NaN,
+      "elapsed_s": 688.7
+    },
+    {
+      "epoch": 103,
+      "loss": NaN,
+      "elapsed_s": 695.5
+    },
+    {
+      "epoch": 104,
+      "loss": NaN,
+      "elapsed_s": 702.2
+    },
+    {
+      "epoch": 105,
+      "loss": NaN,
+      "elapsed_s": 709.0
+    },
+    {
+      "epoch": 106,
+      "loss": NaN,
+      "elapsed_s": 715.8
+    },
+    {
+      "epoch": 107,
+      "loss": NaN,
+      "elapsed_s": 722.5
+    },
+    {
+      "epoch": 108,
+      "loss": NaN,
+      "elapsed_s": 729.3
+    },
+    {
+      "epoch": 109,
+      "loss": NaN,
+      "elapsed_s": 736.0
+    },
+    {
+      "epoch": 110,
+      "loss": NaN,
+      "elapsed_s": 742.8
+    },
+    {
+      "epoch": 111,
+      "loss": NaN,
+      "elapsed_s": 749.6
+    },
+    {
+      "epoch": 112,
+      "loss": NaN,
+      "elapsed_s": 756.3
+    },
+    {
+      "epoch": 113,
+      "loss": NaN,
+      "elapsed_s": 763.1
+    },
+    {
+      "epoch": 114,
+      "loss": NaN,
+      "elapsed_s": 769.9
+    },
+    {
+      "epoch": 115,
+      "loss": NaN,
+      "elapsed_s": 776.6
+    },
+    {
+      "epoch": 116,
+      "loss": NaN,
+      "elapsed_s": 783.4
+    },
+    {
+      "epoch": 117,
+      "loss": NaN,
+      "elapsed_s": 790.1
+    },
+    {
+      "epoch": 118,
+      "loss": NaN,
+      "elapsed_s": 796.9
+    },
+    {
+      "epoch": 119,
+      "loss": NaN,
+      "elapsed_s": 803.6
+    },
+    {
+      "epoch": 120,
+      "loss": NaN,
+      "elapsed_s": 810.4
+    },
+    {
+      "epoch": 121,
+      "loss": NaN,
+      "elapsed_s": 817.2
+    },
+    {
+      "epoch": 122,
+      "loss": NaN,
+      "elapsed_s": 823.9
+    },
+    {
+      "epoch": 123,
+      "loss": NaN,
+      "elapsed_s": 830.7
+    },
+    {
+      "epoch": 124,
+      "loss": NaN,
+      "elapsed_s": 837.4
+    },
+    {
+      "epoch": 125,
+      "loss": NaN,
+      "elapsed_s": 844.2
+    },
+    {
+      "epoch": 126,
+      "loss": NaN,
+      "elapsed_s": 851.0
+    },
+    {
+      "epoch": 127,
+      "loss": NaN,
+      "elapsed_s": 857.7
+    },
+    {
+      "epoch": 128,
+      "loss": NaN,
+      "elapsed_s": 864.5
+    },
+    {
+      "epoch": 129,
+      "loss": NaN,
+      "elapsed_s": 871.2
+    },
+    {
+      "epoch": 130,
+      "loss": NaN,
+      "elapsed_s": 878.0
+    }
+  ],
+  "decision": "rejected",
+  "delta_pts": -45.48,
+  "feedback": "REJECTED: val_acc 0.0129 <= best 0.4677 (-45.48 pts) (near chance: representation collapsed?). Best code kept."
+}

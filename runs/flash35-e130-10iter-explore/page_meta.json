@@ -1,0 +1,5 @@
+{
+  "_about": "Hand-written header for the review page of this variant run (read by scripts/build_review_page.py).",
+  "title": "Explore Run Review（實驗性）",
+  "banner_html": "<b>實驗性 explore run，不是主結果。</b>主結果是 <a href=\"https://peterchang1023.github.io/minimal-automated-AI-researcher/\">flash35-e130-10iter</a>（47.27% → 57.73%）。這次只換了給 Gemini 的 prompt（<code>--prompt-variant explore</code>）：拿掉「minimal code change、一次只改一個想法、偏好短預算有效的改動」這類引導，改成列出可探索的方向（換 SSL 方法、改 encoder 架構），並告訴 Gemini 每輪實際花了幾分鐘、上限 60 分鐘。其他全部相同：gemini-3.5-flash、130 pretrain epoch、linear probe 100 epoch、seed 42、同一個 val split、epoch 與 optimizer 鎖定，另外每輪 GPU 記憶體上限 24 GB。<br><b>揭露：</b>Gemini 免費方案多次回 503（high demand），失敗的輪次（沒有執行任何實驗）已刪除，所以 iter 編號跳過 5 與 8；原始紀錄有備份。這次用了 3 個 Google 帳號的免費 API key。iter 3 的提升有一大部分來自把 backbone 加寬 1.5 倍（寬度改回 1.0 倍的對照實驗只有 58.09%），之後的 best 也都是更大的模型，每輪耗時從 18 分鐘增加到 24–40 分鐘：<b>epoch 固定，但模型容量與算力沒有固定</b>。"
+}

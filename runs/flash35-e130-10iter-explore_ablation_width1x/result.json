@@ -1,0 +1,49 @@
+{
+  "source_run": "runs/flash35-e130-10iter-explore",
+  "code": "ablations/explore_iter3_width1x.py",
+  "code_sha256": "b3d43c552cf0076de4b2667b9cbfe64dfec7deaa65125608194276312ec1a708",
+  "source_best": {
+    "iter": 11,
+    "val_acc": 0.6100628972053528,
+    "time": "2026-11-18T17:13:10+08:00"
+  },
+  "budget": {
+    "pretrain_epochs": 130,
+    "linear_eval_epochs": 100,
+    "linear_lr": 0.1,
+    "linear_batch_size": 256
+  },
+  "seed": "official set_seed(42), linear probe seed 100",
+  "started": "2026-11-18T17:44:05+0800",
+  "argv": [
+    "scripts/run_full_budget.py",
+    "runs/flash35-e130-10iter-explore",
+    "--code",
+    "ablations/explore_iter3_width1x.py",
+    "--pretrain-epochs",
+    "130",
+    "--out",
+    "runs/flash35-e130-10iter-explore_ablation_width1x",
+    "--gpu-mem-gb",
+    "24"
+  ],
+  "smoke_seconds": 1.9,
+  "smoke": {
+    "smoke_ok": true,
+    "n_params": 20620352,
+    "loss": 3.1900722980499268,
+    "candidate_config": {
+      "pretrain_epochs": 130,
+      "linear_eval_epochs": 100,
+      "batch_size": 512,
+      "lr": 0.4,
+      "weight_decay": 0.0001,
+      "lambda_param": 0.005,
+      "linear_lr": 0.1,
+      "linear_batch_size": 256
+    }
+  },
+  "seconds": 1051.5,
+  "status": "ok",
+  "val_acc": 0.5809334516525269
+}

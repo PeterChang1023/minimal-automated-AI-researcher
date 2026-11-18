@@ -1,0 +1,2 @@
+running ablations/explore_iter3_width1x.py with pretrain_epochs=130 -> runs/flash35-e130-10iter-explore_ablation_width1x
+val_acc=0.5809  (1052s)  -> runs/flash35-e130-10iter-explore_ablation_width1x/result.json

@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Decoupled Contrastive Loss with a Memory Queue Buffer (DCL-Q, queue size=4096) expands the negative pair coverage from 1022 to 5118 negative embeddings per sample, significantly sharpening hyperspherical uniformity and feature discriminability on CIFAR-100 without adding model compute overhead.",
+  "rationale": "In iter 3, DCL achieved our best performance (0.5988 val acc) by eliminating positive gradient suppression. However, at batch size 512 (1024 total views), each anchor only contrasts against 1022 in-batch negatives. Storing 4096 recent projection vectors in a FIFO memory buffer inside BarlowTwinsLoss increases the negative pool by 5x (5118 negatives per anchor). Because network parameters evolve smoothly across adjacent iterations, these recent projections serve as high-quality negatives that force the encoder to learn finer visual representations.",
+  "expected_effect": "Improve validation linear probe accuracy beyond 0.60 by strengthening contrastive representation uniformity across 100 CIFAR-100 classes.",
+  "change_summary": "1. Upgraded BarlowTwinsLoss to Decoupled Contrastive Loss with Queue (DCL-Q): added a 4096-dim registered queue buffer with FIFO dequeue/enqueue logic. 2. Computed negative similarity logsumexp across both intra-batch negatives and queue negatives. 3. Retained the 1.5x wider CIFAR ResNet-18 backbone (768-dim), 3-layer projection head, and hyperparameters from iter 3.",
+  "change_type": "structural",
+  "direction": "A"
+}

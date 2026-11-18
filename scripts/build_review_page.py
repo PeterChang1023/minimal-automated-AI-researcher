@@ -388,7 +388,13 @@ def main():
     data = collect(a.run_dir, a.noise_pts)
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     tpl = (Path(__file__).with_name("review_page_template.html")).read_text(encoding="utf-8")
-    html = tpl.replace("__RUN_NAME__", data["run"]).replace("/*__DATA__*/null", blob)
+    # optional runs/<run>/page_meta.json: {"title": "...", "banner_html": "..."} (hand-written, for variant runs)
+    meta = json.loads(read(a.run_dir / "page_meta.json") or "{}")
+    banner = meta.get("banner_html", "")
+    banner = f'  <div class="note" style="border-style:solid">{banner}</div>' if banner else ""
+    html = (tpl.replace("__RUN_NAME__", data["run"]).replace("/*__DATA__*/null", blob)
+            .replace("__PAGE_TITLE__", meta.get("title", "Minimal AI Research Review"))
+            .replace("<!--__BANNER__-->\n", banner + "\n" if banner else ""))
     if not a.artifact:
         html = ('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">'
                 '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>\n'

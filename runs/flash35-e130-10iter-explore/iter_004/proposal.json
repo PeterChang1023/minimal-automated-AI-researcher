@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Adding Squeeze-and-Excitation (SE) channel attention and GELU activations to a 2.0x wider CIFAR-adapted ResNet-18 backbone (1024-dim features) will significantly enhance channel-wise feature recalibration and representation capacity for DCL pretraining within the compute budget.",
+  "rationale": "In iter 3, scaling the backbone to 1.5x width (768-dim) with DCL (tau=0.10) yielded a +2.32 pt gain (0.5988 val acc). Wall-clock time was 23.9 min out of a 60 min budget. Moving to a 2.0x wider backbone (1024-dim) combined with Squeeze-and-Excitation (SE) modules allows dynamic inter-channel attention recalibration, while GELU provides smoother non-linear optimization for contrastive feature spaces. Estimated runtime is ~32 minutes, remaining safely under the 60-minute limit.",
+  "expected_effect": "Improve linear evaluation accuracy beyond 0.60 (target 0.61+) by enabling richer, channel-adaptive feature representations under DCL contrastive learning.",
+  "change_summary": "1. Upgraded backbone to 2.0x width ResNet-18 (channels [128, 256, 512, 1024], backbone_dim=1024).\n2. Integrated Squeeze-and-Excitation (SE) blocks into every ResNet basic block.\n3. Replaced ReLU activations with GELU throughout the backbone and projection head.\n4. Updated projection head input dimension to 1024.",
+  "change_type": "structural",
+  "direction": "B"
+}

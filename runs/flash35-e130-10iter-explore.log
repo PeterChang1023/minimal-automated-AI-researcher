@@ -1,0 +1,41 @@
+[2026-11-17T22:37:55+08:00] iter 0: running unmodified baseline
+[2026-11-17T22:55:49+08:00] iter 0 -> ok val_acc=0.467725932598114
+[2026-11-18T00:28:37+08:00] iter 1: proposing (best so far 0.4677 @ iter 0)
+[2026-11-18T00:31:12+08:00] iter 1: executing — Implemented VICReg objective in BarlowTwinsLoss (sim_coeff=25, std_coeff=25, cov_coeff=1); updated augmentations for 32x
+[2026-11-18T00:46:24+08:00] iter 1 -> ok / rejected: REJECTED: val_acc 0.0129 <= best 0.4677 (-45.48 pts) (near chance: representation collapsed?). Best code kept.
+[2026-11-18T00:46:24+08:00] iter 2: proposing (best so far 0.4677 @ iter 0)
+[llm] gemini call failed (HTTP 503: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.); retry in 5s
+[2026-11-18T00:48:58+08:00] iter 2: executing — Implemented NT-Xent loss with temperature tau=0.15 inside BarlowTwinsLoss; updated crop scale to (0.08, 1.0); set pretra
+[2026-11-18T01:06:43+08:00] iter 2 -> ok / accepted: ACCEPTED: val_acc 0.5756 > best 0.4677 (+10.79 pts). Now the best.
+[2026-11-18T01:06:43+08:00] iter 3: proposing (best so far 0.5756 @ iter 2)
+[2026-11-18T01:10:24+08:00] iter 3: executing — 1. Implemented Decoupled Contrastive Loss (DCL) with temperature tau=0.10 inside BarlowTwinsLoss.
+2. Built a custom CIFA
+[2026-11-18T01:34:21+08:00] iter 3 -> ok / accepted: ACCEPTED: val_acc 0.5988 > best 0.5756 (+2.32 pts). Now the best.
+[2026-11-18T01:34:21+08:00] iter 4: proposing (best so far 0.5988 @ iter 3)
+[2026-11-18T01:36:48+08:00] iter 4: executing — 1. Upgraded backbone to 2.0x width ResNet-18 (channels [128, 256, 512, 1024], backbone_dim=1024).
+2. Integrated Squeeze-
+[2026-11-18T02:10:27+08:00] iter 4 -> ok / rejected: REJECTED: val_acc 0.5862 <= best 0.5988 (-1.26 pts). Best code kept.
+[2026-11-18T08:59:50+08:00] iter 6: proposing (best so far 0.5988 @ iter 3)
+[llm] gemini call failed (HTTP 503: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.); retry in 120s
+[2026-11-18T09:04:25+08:00] iter 6: executing — 1. Replaced ResNet-18 backbone with CIFAR-adapted ResNet-34 (depths [3, 4, 6, 3], base channels [64, 128, 256, 512], bac
+[2026-11-18T09:28:43+08:00] iter 6 -> ok / rejected: REJECTED: val_acc 0.4098 <= best 0.5988 (-18.90 pts). Best code kept.
+[2026-11-18T09:28:43+08:00] iter 7: proposing (best so far 0.5988 @ iter 3)
+[llm] gemini call failed (HTTP 503: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.); retry in 120s
+[2026-11-18T09:34:30+08:00] iter 7: executing — 1. Upgraded BarlowTwinsLoss from standard DCL to Decoupled Contrastive Loss with Hard-Negative Reweighting (DCLW, temper
+[2026-11-18T09:58:13+08:00] iter 7 -> ok / rejected: REJECTED: val_acc 0.5905 <= best 0.5988 (-0.83 pts). Best code kept.
+[2026-11-18T10:12:47+08:00] iter 9: proposing (best so far 0.5988 @ iter 3)
+[llm] gemini call failed (HTTP 503: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.); retry in 120s
+[llm] gemini call failed (HTTP 503: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.); retry in 240s
+[2026-11-18T10:22:50+08:00] iter 9: executing — 1. Modified ProjectionHead to output 256-dimensional embeddings (padded with zeros to 2048 to satisfy harness interface 
+[2026-11-18T10:47:06+08:00] iter 9 -> ok / rejected: REJECTED: val_acc 0.5796 <= best 0.5988 (-1.92 pts). Best code kept.
+[2026-11-18T16:04:52+08:00] iter 10: proposing (best so far 0.5988 @ iter 3)
+[2026-11-18T16:12:16+08:00] iter 10: executing — 1. Upgraded BarlowTwinsLoss to Decoupled Contrastive Loss with Queue (DCL-Q): added a 4096-dim registered queue buffer w
+[2026-11-18T16:36:30+08:00] iter 10 -> ok / rejected: REJECTED: val_acc 0.4945 <= best 0.5988 (-10.43 pts). Best code kept.
+[2026-11-18T16:36:30+08:00] iter 11: proposing (best so far 0.5988 @ iter 3)
+[2026-11-18T16:38:48+08:00] iter 11: executing — 1. Implemented BlurPool2d (3x3 depthwise anti-aliasing binomial filter [1, 2, 1]^T x [1, 2, 1] / 16) inside downsampling
+[2026-11-18T17:13:10+08:00] iter 11 -> ok / accepted: ACCEPTED: val_acc 0.6101 > best 0.5988 (+1.13 pts). Now the best.
+[2026-11-18T19:17:03+08:00] iter 12: proposing (best so far 0.6101 @ iter 11)
+[2026-11-18T19:18:00+08:00] iter 12: executing — 1. Upgraded backbone to CIFARResNet26AntiAliased with block depths [3, 3, 3, 3] and 1.5x width (768 feature dimensions).
+[2026-11-18T19:58:17+08:00] iter 12 -> ok / accepted: ACCEPTED: val_acc 0.6144 > best 0.6101 (+0.43 pts). Now the best.
+[2026-11-18T19:59:22+08:00] next proposal written to /home/PeterChang/minimal-automated-AI-researcher/runs/flash35-e130-10iter-explore/next_proposal: Aggregating multi-resolution representations from both stage 3 (8x8 feature map, 384-d) and stage 4 (4x4 feature map, 768-d) into a normalized 1152-dimensional multi-stage backbone feature vector will preserve fine-grained visual details (textures and shapes) essential for 100-class CIFAR-100 linear probe evaluation, while retaining high-level semantic abstractions.
+[harness] done. best val_acc=0.6144 (iter 12); baseline=0.467725932598114

@@ -7,6 +7,13 @@
 > - **[Review version with comments (claude.ai)](https://claude.ai/artifact/GkiyZuzH6zFeeQbPqPShpX)** — line comments, replies, and agree / doubt / more-seeds verdicts per iteration
 > - Source: [`docs/index.html`](docs/index.html) (same file as [`runs/flash35-e130-10iter/viz/review.html`](runs/flash35-e130-10iter/viz/review.html)); rebuild with
 >   `python scripts/build_review_page.py runs/flash35-e130-10iter --out docs/index.html`
+>
+> **🧪 Experimental explore run (not the main result)** — same loop and budget, only the Gemini prompt changed
+> (`--prompt-variant explore`: no "minimal change" guidance; lists other SSL methods / encoder changes; reports time used per run).
+> 46.77% → 61.44%, but mostly via a bigger backbone (see the disclosure).
+> [Review page (GitHub Pages)](https://peterchang1023.github.io/minimal-automated-AI-researcher/explore/) ·
+> [with comments (claude.ai)](https://claude.ai/artifact/FgAX3Z9UiLtA2iZprvLsuj) ·
+> [disclosure](runs/flash35-e130-10iter-explore/DISCLOSURE.md) · width ablation: [`runs/flash35-e130-10iter-explore_ablation_width1x`](runs/flash35-e130-10iter-explore_ablation_width1x/result.json)
 
 **What this is.** An automated research loop for the FML-bench *solo-learn* task (self-supervised learning on CIFAR-100).
 Gemini proposes one change to the training code per round; the program checks it, trains with a fixed 130-epoch budget,
