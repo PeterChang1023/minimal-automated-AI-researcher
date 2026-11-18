@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Aggregating multi-resolution representations from both stage 3 (8x8 feature map, 384-d) and stage 4 (4x4 feature map, 768-d) into a normalized 1152-dimensional multi-stage backbone feature vector will preserve fine-grained visual details (textures and shapes) essential for 100-class CIFAR-100 linear probe evaluation, while retaining high-level semantic abstractions.",
+  "rationale": "In low-resolution 32x32 images, standard global pooling after layer 4 reduces spatial resolution to 4x4 before pooling, discarding mid-level spatial texture cues. Combining L2-normalized stage-3 and stage-4 features (1152 dimensions total) allows DCL pretraining to directly optimize mid-level features and provides the downstream linear evaluation probe with access to both structural and semantic visual information. Iter 12 demonstrated that anti-aliased ResNet-26 (768-d) reached 0.6144 val_acc; multi-stage feature aggregation builds directly on this architecture with minimal compute overhead (~40 min execution time).",
+  "expected_effect": "Improve linear probe top-1 validation accuracy beyond 0.6144 by enriching the representation space with multi-stage spatial features.",
+  "change_summary": "1. Modified CIFARResNet26AntiAliased forward pass to extract, pool, and L2-normalize features from both layer3 (384-d) and layer4 (768-d), concatenating them into a 1152-dimensional backbone feature vector. 2. Updated self.backbone_dim to 1152 and ProjectionHead input dimension from 768 to 1152. 3. Maintained DCL loss (tau=0.10), 4096-wide projection layers, anti-aliased BlurPool blocks, and detail-preserving augmentations.",
+  "change_type": "structural",
+  "direction": "B"
+}

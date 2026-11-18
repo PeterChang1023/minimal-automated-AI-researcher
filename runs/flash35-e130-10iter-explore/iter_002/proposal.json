@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Replacing Barlow Twins cross-correlation loss with NT-Xent (SimCLR) contrastive loss using temperature scaling (tau=0.15) and standard CIFAR crop scale (0.08-1.0) will provide a stronger, sample-efficient contrastive learning signal for 130-epoch pretraining on CIFAR-100.",
+  "rationale": "In Iteration 1, VICReg collapsed due to scaling/variance penalty instability under SGD. SimCLR (NT-Xent) is a proven contrastive objective that directly maximizes mutual information between views while pushing away 1022 negative pairs in a batch of 512. Normalizing projections and applying soft cross-entropy with temperature scaling prevents feature collapse without sensitive covariance weights. Furthermore, adjusting crop scale from (0.2, 1.0) to (0.08, 1.0) allows the network to learn multi-scale local representations critical for CIFAR-100.",
+  "expected_effect": "Prevents feature collapse while significantly increasing representation discriminativeness, aiming to boost linear probe accuracy above the 0.4677 baseline.",
+  "change_summary": "Implemented NT-Xent loss with temperature tau=0.15 inside BarlowTwinsLoss; updated crop scale to (0.08, 1.0); set pretrain learning rate to 0.5.",
+  "change_type": "structural",
+  "direction": "A"
+}

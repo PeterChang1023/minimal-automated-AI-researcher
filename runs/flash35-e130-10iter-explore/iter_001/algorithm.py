@@ -1,0 +1,131 @@
+"""
+VICReg (Variance-Invariance-Covariance Regularization) self-supervised learning for CIFAR-100.
+
+Replaces Barlow Twins loss with VICReg to achieve faster convergence and better feature variance
+under compute-constrained pretraining (130 epochs). Also tailors data augmentation for 32x32 images
+by replacing heavy Gaussian blur with RandomSolarize.
+"""
+import torch
+import torch.nn as nn
+import torchvision.models as models
+import torchvision.transforms as transforms
+
+
+class BarlowTwinsLoss(nn.Module):
+    """
+    VICReg Loss implementation wrapped inside the interface expected by the harness.
+    
+    VICReg regularizes three properties:
+    - Invariance (MSE between representations of augmented views)
+    - Variance (hinge loss on std per dimension >= 1)
+    - Covariance (decorrelating dimensions by penalizing off-diagonal covariances)
+    """
+
+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, sim_coeff=25.0, std_coeff=25.0, cov_coeff=1.0):
+        super().__init__()
+        self.embedding_dim = embedding_dim
+        self.sim_coeff = sim_coeff
+        self.std_coeff = std_coeff
+        self.cov_coeff = cov_coeff
+
+    def forward(self, z1, z2):
+        # 1. Invariance loss (MSE)
+        sim_loss = nn.functional.mse_loss(z1, z2)
+
+        # 2. Variance loss (hinge loss on standard deviation per feature dimension)
+        std_z1 = torch.sqrt(z1.var(dim=0) + 1e-4)
+        std_z2 = torch.sqrt(z2.var(dim=0) + 1e-4)
+        std_loss = torch.mean(nn.functional.relu(1.0 - std_z1)) + torch.mean(nn.functional.relu(1.0 - std_z2))
+
+        # 3. Covariance loss (off-diagonal terms of covariance matrix)
+        N, D = z1.shape
+        z1_centered = z1 - z1.mean(dim=0)
+        z2_centered = z2 - z2.mean(dim=0)
+
+        cov_z1 = (z1_centered.T @ z1_centered) / (N - 1)
+        cov_z2 = (z2_centered.T @ z2_centered) / (N - 1)
+
+        diag_mask = ~torch.eye(D, dtype=torch.bool, device=z1.device)
+        cov_loss = (cov_z1[diag_mask].pow(2).sum() / D) + (cov_z2[diag_mask].pow(2).sum() / D)
+
+        # Weighted sum of losses
+        total_loss = self.sim_coeff * sim_loss + self.std_coeff * std_loss + self.cov_coeff * cov_loss
+        return total_loss
+
+
+class ProjectionHead(nn.Module):
+    """3-layer projection head for VICReg (Linear -> BN -> ReLU -> Linear -> BN -> ReLU -> Linear)."""
+
+    def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, output_dim),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class BarlowTwinsModel(nn.Module):
+    """ResNet-18 backbone + projection head for VICReg."""
+
+    def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):
+        super().__init__()
+        # ResNet-18 backbone (remove final FC)
+        backbone = models.resnet18(weights=None)
+        self.backbone_dim = backbone.fc.in_features  # 512
+        backbone.fc = nn.Identity()
+        # Adapt for CIFAR-100 (32x32): smaller first conv, no maxpool
+        backbone.conv1 = nn.Conv2d(3, 64, 3, 1, 1, bias=False)
+        backbone.maxpool = nn.Identity()
+        self.backbone = backbone
+        self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
+
+    def forward(self, x):
+        features = self.backbone(x)
+        projections = self.projector(features)
+        return features, projections
+
+
+def get_model():
+    """Return model with backbone and projector."""
+    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
+
+
+def get_training_config():
+    """Return training config."""
+    return {
+        'pretrain_epochs': 130,
+        'linear_eval_epochs': 100,
+        'batch_size': 512,
+        'lr': 0.3,
+        'weight_decay': 1e-4,
+        'lambda_param': 5e-3,       # standard config key kept for compatibility
+        'linear_lr': 0.1,
+        'linear_batch_size': 256,
+    }
+
+
+def get_augmentation():
+    """
+    Return CIFAR-100 tailored SSL augmentations.
+    Replaces heavy Gaussian blur with RandomSolarize suited for 32x32 low-resolution images.
+    """
+    mean = (0.5071, 0.4867, 0.4408)
+    std = (0.2675, 0.2565, 0.2761)
+
+    return transforms.Compose([
+        transforms.RandomResizedCrop(32, scale=(0.2, 1.0)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+        transforms.RandomGrayscale(p=0.2),
+        transforms.RandomSolarize(threshold=128, p=0.1),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std),
+    ])

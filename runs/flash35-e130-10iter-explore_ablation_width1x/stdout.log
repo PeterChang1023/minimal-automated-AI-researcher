@@ -1,0 +1,53 @@
+[harness] candidate config: {'pretrain_epochs': 130, 'linear_eval_epochs': 100, 'batch_size': 512, 'lr': 0.4, 'weight_decay': 0.0001, 'lambda_param': 0.005, 'linear_lr': 0.1, 'linear_batch_size': 256}
+[harness] effective config (after budget overrides): {'pretrain_epochs': 130, 'linear_eval_epochs': 100, 'batch_size': 512, 'lr': 0.4, 'weight_decay': 0.0001, 'lambda_param': 0.005, 'linear_lr': 0.1, 'linear_batch_size': 256}
+[harness] GPU memory cap: 24.0 GB (25.78% of the device); exceeding it raises CUDA OOM in this process only
+Files already downloaded and verified
+Files already downloaded and verified
+Train: 50000, Val portion: 3000, Hidden test: 7000, Visible pool: 53000
+Agent train: 49979, Agent val: 3021 (val_ratio=0.057, val_seed=42)
+
+=== Pretraining Barlow Twins for 130 epochs ===
+[harness] epoch 1: mean pretrain loss 6.0968
+Pretrain Epoch 1/130: Loss=6.0968
+[harness] epoch 5: mean pretrain loss 4.2192
+[harness] epoch 10: mean pretrain loss 2.6324
+[harness] epoch 15: mean pretrain loss 2.0788
+[harness] epoch 20: mean pretrain loss 1.7507
+Pretrain Epoch 20/130: Loss=1.7507
+[harness] epoch 25: mean pretrain loss 1.5444
+[harness] epoch 30: mean pretrain loss 1.3987
+[harness] epoch 35: mean pretrain loss 1.2723
+[harness] epoch 40: mean pretrain loss 1.1781
+Pretrain Epoch 40/130: Loss=1.1781
+[harness] epoch 45: mean pretrain loss 1.1280
+[harness] epoch 50: mean pretrain loss 1.0326
+[harness] epoch 55: mean pretrain loss 0.9648
+[harness] epoch 60: mean pretrain loss 0.8909
+Pretrain Epoch 60/130: Loss=0.8909
+[harness] epoch 65: mean pretrain loss 0.8041
+[harness] epoch 70: mean pretrain loss 0.7320
+[harness] epoch 75: mean pretrain loss 0.6745
+[harness] epoch 80: mean pretrain loss 0.5921
+Pretrain Epoch 80/130: Loss=0.5921
+[harness] epoch 85: mean pretrain loss 0.5586
+[harness] epoch 90: mean pretrain loss 0.4637
+[harness] epoch 95: mean pretrain loss 0.3891
+[harness] epoch 100: mean pretrain loss 0.3291
+Pretrain Epoch 100/130: Loss=0.3291
+[harness] epoch 105: mean pretrain loss 0.2710
+[harness] epoch 110: mean pretrain loss 0.1917
+[harness] epoch 115: mean pretrain loss 0.1402
+[harness] epoch 120: mean pretrain loss 0.1072
+Pretrain Epoch 120/130: Loss=0.1072
+[harness] epoch 125: mean pretrain loss 0.0924
+[harness] epoch 130: mean pretrain loss 0.0764
+Saved pretrained backbone to model_checkpoint/backbone.pt
+
+=== Linear evaluation (100 epochs, seed=100) ===
+
+=== VAL Results ===
+  Linear probe accuracy: 0.580933
+
+Saved results to results_tmp/val_info.json
+[harness] official evaluation wall time: 1049.4s
+[harness] peak GPU memory allocated: 4.9 GB

@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Upgrading to a deeper CIFAR-adapted ResNet-34 backbone ([3,4,6,3] blocks) with final-layer BatchNorm in the projection head, a sharper DCL temperature (tau=0.08), and mild solarization augmentation will significantly improve feature representations for 100-class CIFAR-100 evaluation under a 130-epoch budget.",
+  "rationale": "Iter 3 demonstrated that Decoupled Contrastive Loss (DCL) yields large gains (0.5988 val_acc). However, Iter 4 showed that making ResNet-18 2.0x wider added parameter bloat without depth, degrading performance (0.5862). ResNet-34 provides deeper hierarchical abstractions (16 basic blocks vs 8), which is critical for fine-grained 100-class classification. Adding BatchNorm to the final projector layer standardizes projection dimensions before L2 normalization, while tau=0.08 increases hard-negative gradient emphasis and mild solarization introduces high-frequency structural invariance.",
+  "expected_effect": "Improve linear probe validation accuracy beyond 0.60 by increasing representation depth and feature distribution uniformity without exceeding compute limits (~20 min wall-clock expected).",
+  "change_summary": "1. Replaced ResNet-18 backbone with CIFAR-adapted ResNet-34 (depths [3, 4, 6, 3], base channels [64, 128, 256, 512], backbone_dim=512).\n2. Added BatchNorm1d to the output of ProjectionHead to standardize projections before L2 normalization.\n3. Lowered DCL temperature parameter tau from 0.10 to 0.08.\n4. Added RandomSolarize(threshold=128, p=0.15) and reduced GaussianBlur probability to 0.3 in augmentation pipeline.",
+  "change_type": "structural",
+  "direction": "B"
+}

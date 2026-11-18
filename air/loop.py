@@ -28,7 +28,7 @@ from pathlib import Path
 from .checks import sha256_file, static_check
 from .executor import TASK_DIR, Executor
 from .llm import LLMError, make_backend
-from .prompts import SYSTEM, ParseError, build_user_prompt, parse_response
+from .prompts import SYSTEM, SYSTEM_EXPLORE, ParseError, build_user_prompt, parse_response, plateau_status
 
 REPO = Path(__file__).resolve().parent.parent
 PINNED = {  # sha256 of the official, unchanged files (see fmlbench_task/SHA256SUMS)
@@ -79,6 +79,8 @@ class Run:
             "max_bs": args.max_batch_size,
             "timeout_min": round(args.timeout_min, 1),
         }
+        if args.gpu_mem_gb:
+            self.budget["gpu_mem_gb"] = args.gpu_mem_gb
         # keys forced onto the candidate's get_training_config() by eval_wrapper.py
         self.budget["config_overrides"] = {
             "pretrain_epochs": args.pretrain_epochs,
@@ -141,6 +143,7 @@ class Run:
                 "seeds": {"official_set_seed": 42, "linear_probe_seed_val": 100, "split": "val_ratio=0.057,val_seed=42"},
                 "llm": {"backend": self.args.backend, "model": self.args.model or os.environ.get("GEMINI_MODEL", "")},
                 "hardware": hardware_info(), "fake_executor": self.args.fake_executor,
+                "prompt_variant": self.args.prompt_variant,
                 "selection_split": "val only (hidden test never run by the loop)",
             }, indent=2))
 
@@ -186,13 +189,15 @@ class Run:
     def propose(self, it_dir: Path):
         """LLM step. Returns (proposal, code, error)."""
         best = self.best()
-        user = build_user_prompt(self.budget, best, self.history, self.baseline_acc())
-        (it_dir / "prompt_system.txt").write_text(SYSTEM)
+        variant = self.args.prompt_variant
+        system = SYSTEM_EXPLORE if variant == "explore" else SYSTEM
+        user = build_user_prompt(self.budget, best, self.history, self.baseline_acc(), variant=variant)
+        (it_dir / "prompt_system.txt").write_text(system)
         (it_dir / "prompt_user.txt").write_text(user)
         backend = make_backend(self.args.backend, self.args.model, self.args.response_file)
         t0 = time.time()
         try:
-            text = backend.complete(SYSTEM, user)
+            text = backend.complete(system, user)
         except LLMError as e:
             return None, None, f"LLM call failed: {e}", backend.describe()
         meta = {**backend.describe(), "seconds": round(time.time() - t0, 1)}
@@ -223,6 +228,10 @@ class Run:
                        feedback=f"FAILED before execution: {err}. Reply with the two required fenced blocks.")
         else:
             rec.update({k: proposal[k] for k in ["hypothesis", "rationale", "expected_effect", "change_summary"]})
+            if self.args.prompt_variant == "explore":
+                plateau, _ = plateau_status(self.history, best["val_acc"])
+                rec.update(change_type=str(proposal.get("change_type", "")).lower(),
+                           direction=proposal.get("direction", ""), plateau_rule_active=plateau)
             problems = static_check(code)
             bs = self._literal_batch_size(code)
             if bs is not None and bs > self.args.max_batch_size:
@@ -318,12 +327,17 @@ def parse_args(argv=None):
     p.add_argument("--backend", default="gemini", choices=["gemini", "gemini-cli", "claude-cli", "file", "mock"])
     p.add_argument("--model", default="", help="LLM model id (gemini default: $GEMINI_MODEL or gemini-3.1-pro-preview)")
     p.add_argument("--response-file", default="", help="for --backend file")
+    p.add_argument("--prompt-variant", default="default", choices=["default", "explore"],
+                   help="default = original prompt; explore = lists structural directions, reports wall-clock, "
+                        "plateau rule (see air/prompts.py)")
     p.add_argument("--max-iters", type=int, default=1, help="number of LLM candidates (excluding baseline)")
     p.add_argument("--max-hours", type=float, default=12.0)
     p.add_argument("--max-consecutive-failures", type=int, default=3)
     p.add_argument("--pretrain-epochs", type=int, default=50, help="fixed shortened budget (upstream: 130)")
     p.add_argument("--max-batch-size", type=int, default=512, help="cap for the shared GPU")
     p.add_argument("--timeout-min", type=float, default=40.0)
+    p.add_argument("--gpu-mem-gb", type=float, default=0,
+                   help="per-process GPU memory cap for each experiment on the shared GPU (0 = no cap)")
     p.add_argument("--data-root", default=f"/cache/{user}/air/data", help="contains cifar-100-python/")
     p.add_argument("--work-root", default=f"/cache/{user}/air/work", help="sandboxes + checkpoints")
     p.add_argument("--keep-ckpt", action="store_true")

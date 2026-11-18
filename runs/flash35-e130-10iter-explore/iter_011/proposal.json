@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Integrating anti-aliased downsampling (BlurPool) into a deeper CIFAR-adapted ResNet-22 backbone (depths [2, 3, 3, 2], 1.5x width, 768-dim features) will preserve translation invariance under spatial augmentations (RandomResizedCrop/Flip), improving positive-pair alignment and representation quality under Decoupled Contrastive Loss (DCL).",
+  "rationale": "Standard strided convolutions in ResNet downsampling layers violate shift invariance and introduce high-frequency spatial aliasing artifacts, especially on 32x32 CIFAR images where spatial resolution is low. BlurPool (Zhang, 2019) inserts a 3x3 binomial low-pass filter before sub-sampling, enforcing translation equivariance across augmented views. Combining BlurPool anti-aliased downsampling with deeper intermediate layers (ResNet-22: [2, 3, 3, 2] basic blocks) expands feature abstraction capacity without parameter explosion, directly addressing feature alignment degradation in DCL pretraining (Iter 3 best: 0.5988).",
+  "expected_effect": "Anti-aliasing ensures smooth feature transitions during spatial crop augmentations, boosting positive alignment and leading to higher linear probe validation accuracy (>0.6050) while staying well within the 60-minute wall-clock limit (~27 min execution time).",
+  "change_summary": "1. Implemented BlurPool2d (3x3 depthwise anti-aliasing binomial filter [1, 2, 1]^T x [1, 2, 1] / 16) inside downsampling residual blocks.\n2. Upgraded backbone to a CIFAR-adapted ResNet-22 with depths [2, 3, 3, 2] and 1.5x width multiplier (channels [96, 192, 384, 768], backbone_dim=768).\n3. Retained Decoupled Contrastive Loss (DCL, tau=0.10), 3-layer projection head, and standard training hyperparameters.",
+  "change_type": "structural",
+  "direction": "B"
+}

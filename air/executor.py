@@ -84,6 +84,8 @@ class Executor:
         b = {"config_overrides": self.budget["config_overrides"]}
         if self.budget.get("pretrain_seed") is not None:
             b["pretrain_seed"] = self.budget["pretrain_seed"]
+        if self.budget.get("gpu_mem_gb"):
+            b["gpu_mem_gb"] = self.budget["gpu_mem_gb"]
         (sb / "budget.json").write_text(json.dumps(b, indent=2))
         os.symlink(self.data_root.resolve(), sb / "data")
         return sb
