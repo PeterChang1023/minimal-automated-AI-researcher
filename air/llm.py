@@ -44,6 +44,7 @@ class GeminiBackend(Backend):
         # run wait them out without changing defaults (AIR_LLM_RETRIES, AIR_LLM_MAX_WAIT seconds).
         self.max_retries = int(os.environ.get("AIR_LLM_RETRIES", max_retries))
         self.max_wait = int(os.environ.get("AIR_LLM_MAX_WAIT", 60))
+        self.base_wait = int(os.environ.get("AIR_LLM_BASE_WAIT", 5))  # every retry counts toward daily quota
         self.timeout = timeout
         self.key = os.environ.get("GEMINI_API_KEY")
         if not self.key:
@@ -86,7 +87,7 @@ class GeminiBackend(Backend):
                     raise LLMError(last) from e
             except (urllib.error.URLError, TimeoutError, LLMError) as e:
                 last = str(e)
-            wait = min(self.max_wait, 5 * 2 ** attempt)
+            wait = min(self.max_wait, self.base_wait * 2 ** attempt)
             print(f"[llm] gemini call failed ({last}); retry in {wait}s", flush=True)
             time.sleep(wait)
         raise LLMError(f"gemini failed after {self.max_retries} attempts: {last}")
