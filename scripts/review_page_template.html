@@ -570,7 +570,8 @@ function lossPane(it) {
   svg.append(sv("path", {d: pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join(""), fill: "none", stroke: color, "stroke-width": 1.8}));
   const first = pts[0], last = pts[pts.length - 1];
   const cap = el("p", {class: "muted small", text: `第 ${first[0]} epoch loss ${first[1].toFixed(3)} → 第 ${last[0]} epoch ${last[1].toFixed(4)}。不同 loss 公式的數值不能直接互比，看形狀（有沒有降、有沒有爆）就好。`});
-  return el("div", {class: "losswrap"}, svg, cap);
+  const why = el("p", {class: "small", style: "margin-top:6px;font-weight:600;color:var(--acc)", text: "自監督訓練沒有標籤，所以過程中只能看 loss，accuracy 要訓練完用 linear probe 才算得出來（就是這輪的 val acc）。"});
+  return el("div", {class: "losswrap"}, svg, cap, why);
 }
 
 /* ---------- 8: feedback chain ---------- */
