@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Decoupled Contrastive Loss (DCL) with optimal temperature (tau=0.10) combined with a 1.5x wider CIFAR-adapted ResNet-18 backbone (768 feature dimensions) will significantly boost representation quality by eliminating positive-negative gradient coupling and increasing feature capacity under a 130-epoch budget.",
+  "rationale": "Iter 2 demonstrated that contrastive learning (SimCLR) yielded a dramatic gain (+10.79 pts to 0.5756). However, standard NT-Xent includes the positive pair in the denominator, which dampens positive alignment gradients as positive similarity increases. DCL (Yeh et al., CVPR 2022) decouples positive and negative terms in the denominator, providing stronger optimization signals especially in compute-bounded regimes. Additionally, standard ResNet-18 (512-dim) can bottleneck representation capacity for 100 classes; widening backbone channels by 1.5x (to 768-dim) expands feature capacity while remaining comfortably within our 60-minute GPU budget (~22-25 min total wall clock).",
+  "expected_effect": "Improve linear-probe validation top-1 accuracy beyond 0.60 by mitigating gradient suppression and increasing backbone capacity.",
+  "change_summary": "1. Implemented Decoupled Contrastive Loss (DCL) with temperature tau=0.10 inside BarlowTwinsLoss.\n2. Built a custom CIFAR-adapted ResNet-18 backbone with 1.5x width multiplier (channels [96, 192, 384, 768], backbone_dim=768).\n3. Adjusted projection head input to 768 and pretrain learning rate to 0.4.",
+  "change_type": "structural",
+  "direction": "A"
+}

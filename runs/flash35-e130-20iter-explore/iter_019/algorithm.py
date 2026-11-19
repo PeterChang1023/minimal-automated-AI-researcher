@@ -1,0 +1,277 @@
+"""
+Self-supervised learning algorithm: Dual-Space Decorrelation (DSD) Loss
+with Anti-Aliased ResNet-26 Backbone.
+
+Combines sample-level instance discrimination (DCL) on projection vectors
+with dual-space channel decorrelation (Barlow Twins cross-correlation penalty
+applied directly to both 768-dim backbone features and 1280-dim projection vectors).
+"""
+import math
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.transforms as transforms
+
+
+class BarlowTwinsLoss(nn.Module):
+    """
+    Dual-Space Decorrelation (DSD) Loss:
+    - Decoupled Contrastive Loss (DCL, tau=0.10) on projection vectors p (1280-d).
+    - Barlow Twins decorrelation penalty on projection vectors p (1280-d).
+    - Direct Barlow Twins decorrelation penalty on backbone features f (768-d).
+
+    This enforces maximum channel entropy and orthogonality directly inside
+    the backbone feature space evaluated by the downstream linear probe.
+    """
+
+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10,
+                 bt_weight_proj=0.5, bt_weight_feat=0.5, feat_dim=768):
+        super().__init__()
+        self.temperature = temperature
+        self.lambda_param = lambda_param
+        self.embedding_dim = embedding_dim
+        self.bt_weight_proj = bt_weight_proj
+        self.bt_weight_feat = bt_weight_feat
+        self.feat_dim = feat_dim
+        self.proj_dim = embedding_dim - feat_dim  # 1280
+
+    def forward(self, z1, z2):
+        batch_size = z1.shape[0]
+
+        # Unpack 2048-d vectors into backbone features (768-d) and projection outputs (1280-d)
+        f1, p1 = z1[:, :self.feat_dim], z1[:, self.feat_dim:]
+        f2, p2 = z2[:, :self.feat_dim], z2[:, self.feat_dim:]
+
+        # -------------------------------------------------------------
+        # 1. Decoupled Contrastive Loss (DCL) on Projection Vectors (1280-d)
+        # -------------------------------------------------------------
+        p1_norm = F.normalize(p1, dim=1)
+        p2_norm = F.normalize(p2, dim=1)
+
+        p_norm = torch.cat([p1_norm, p2_norm], dim=0)
+        sim = torch.matmul(p_norm, p_norm.T) / self.temperature
+
+        pos_sim = torch.cat([
+            torch.diag(sim, batch_size),
+            torch.diag(sim, -batch_size)
+        ], dim=0)
+
+        mask_self = torch.eye(2 * batch_size, dtype=torch.bool, device=z1.device)
+        mask_pos = torch.zeros((2 * batch_size, 2 * batch_size), dtype=torch.bool, device=z1.device)
+        mask_pos[:batch_size, batch_size:] = torch.eye(batch_size, dtype=torch.bool, device=z1.device)
+        mask_pos[batch_size:, :batch_size] = torch.eye(batch_size, dtype=torch.bool, device=z1.device)
+
+        mask_neg = ~(mask_self | mask_pos)
+        sim_neg = sim.masked_fill(~mask_neg, -1e9)
+        neg_logsumexp = torch.logsumexp(sim_neg, dim=1)
+
+        dcl_loss = (-pos_sim + neg_logsumexp).mean()
+
+        # -------------------------------------------------------------
+        # 2. Barlow Twins Projection Decorrelation (1280-d)
+        # -------------------------------------------------------------
+        p1_bn = (p1 - p1.mean(dim=0)) / (p1.std(dim=0) + 1e-5)
+        p2_bn = (p2 - p2.mean(dim=0)) / (p2.std(dim=0) + 1e-5)
+
+        c_p = torch.matmul(p1_bn.T, p2_bn) / batch_size
+        on_diag_p = (torch.diagonal(c_p) - 1.0).pow(2).sum()
+        off_diag_mask_p = ~torch.eye(self.proj_dim, dtype=torch.bool, device=z1.device)
+        off_diag_p = (c_p[off_diag_mask_p]).pow(2).sum()
+
+        bt_proj_loss = (on_diag_p + self.lambda_param * off_diag_p) / self.proj_dim
+
+        # -------------------------------------------------------------
+        # 3. Direct Backbone Feature Decorrelation (768-d)
+        # -------------------------------------------------------------
+        f1_bn = (f1 - f1.mean(dim=0)) / (f1.std(dim=0) + 1e-5)
+        f2_bn = (f2 - f2.mean(dim=0)) / (f2.std(dim=0) + 1e-5)
+
+        c_f = torch.matmul(f1_bn.T, f2_bn) / batch_size
+        on_diag_f = (torch.diagonal(c_f) - 1.0).pow(2).sum()
+        off_diag_mask_f = ~torch.eye(self.feat_dim, dtype=torch.bool, device=z1.device)
+        off_diag_f = (c_f[off_diag_mask_f]).pow(2).sum()
+
+        bt_feat_loss = (on_diag_f + self.lambda_param * off_diag_f) / self.feat_dim
+
+        # -------------------------------------------------------------
+        # Total Dual-Space Loss
+        # -------------------------------------------------------------
+        total_loss = dcl_loss + self.bt_weight_proj * bt_proj_loss + self.bt_weight_feat * bt_feat_loss
+        return total_loss
+
+
+class BlurPool2d(nn.Module):
+    """
+    Anti-aliased downsampling (BlurPool) module using a 3x3 binomial filter
+    [1, 2, 1] x [1, 2, 1]^T / 16 (Zhang 2019).
+    """
+
+    def __init__(self, channels, stride=2):
+        super().__init__()
+        self.stride = stride
+        kernel = torch.tensor([
+            [1.0, 2.0, 1.0],
+            [2.0, 4.0, 2.0],
+            [1.0, 2.0, 1.0]
+        ])
+        kernel = kernel / kernel.sum()
+        self.register_buffer('kernel', kernel.view(1, 1, 3, 3).repeat(channels, 1, 1, 1))
+
+    def forward(self, x):
+        return F.conv2d(x, self.kernel, stride=self.stride, padding=1, groups=x.shape[1])
+
+
+class AntiAliasedBasicBlock(nn.Module):
+    """ResNet BasicBlock with BlurPool anti-aliased downsampling."""
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super().__init__()
+        if stride == 2:
+            self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+            self.blur1 = BlurPool2d(planes, stride=2)
+        else:
+            self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+            self.blur1 = nn.Identity()
+
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion * planes:
+            if stride == 2:
+                self.shortcut = nn.Sequential(
+                    nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=1, bias=False),
+                    BlurPool2d(self.expansion * planes, stride=2),
+                    nn.BatchNorm2d(self.expansion * planes)
+                )
+            else:
+                self.shortcut = nn.Sequential(
+                    nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=1, bias=False),
+                    nn.BatchNorm2d(self.expansion * planes)
+                )
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.blur1(out)
+        out = F.relu(self.bn1(out))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+
+class CIFARResNet26AntiAliased(nn.Module):
+    """
+    CIFAR-adapted ResNet-26 ([3, 3, 3, 3] blocks) with 1.5x width multiplier
+    (channels [96, 192, 384, 768]) and anti-aliased downsampling.
+    """
+
+    def __init__(self, width_mult=1.5):
+        super().__init__()
+        base_channels = [int(c * width_mult) for c in [64, 128, 256, 512]]  # [96, 192, 384, 768]
+        self.in_planes = base_channels[0]
+
+        # CIFAR stem: 3x3 conv, stride 1, no maxpool
+        self.conv1 = nn.Conv2d(3, base_channels[0], kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(base_channels[0])
+
+        # Layer depths: [3, 3, 3, 3] = ResNet-26
+        self.layer1 = self._make_layer(AntiAliasedBasicBlock, base_channels[0], 3, stride=1)
+        self.layer2 = self._make_layer(AntiAliasedBasicBlock, base_channels[1], 3, stride=2)
+        self.layer3 = self._make_layer(AntiAliasedBasicBlock, base_channels[2], 3, stride=2)
+        self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 3, stride=2)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1] * (num_blocks - 1)
+        layers = []
+        for s in strides:
+            layers.append(block(self.in_planes, planes, s))
+            self.in_planes = planes * block.expansion
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
+        out = self.avgpool(out)
+        out = torch.flatten(out, 1)
+        return out
+
+
+class ProjectionHead(nn.Module):
+    """3-layer projection head (768 -> 4096 -> 4096 -> 1280)."""
+
+    def __init__(self, input_dim=768, hidden_dim=4096, output_dim=1280):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, output_dim),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class BarlowTwinsModel(nn.Module):
+    """
+    CIFAR ResNet-26 Anti-Aliased backbone + Dual-Space Projection Output.
+    Packs 768-d backbone features and 1280-d projection head outputs into
+    the 2048-d tensor returned to the official training loop.
+    """
+
+    def __init__(self, feat_dim=768, proj_hidden_dim=4096, proj_output_dim=1280):
+        super().__init__()
+        self.backbone = CIFARResNet26AntiAliased(width_mult=1.5)
+        self.backbone_dim = feat_dim
+        self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
+
+    def forward(self, x):
+        features = self.backbone(x)  # [B, 768]
+        proj_out = self.projector(features)  # [B, 1280]
+        projections = torch.cat([features, proj_out], dim=1)  # [B, 2048]
+        return features, projections
+
+
+def get_model():
+    """Return model instance with Dual-Space output format."""
+    return BarlowTwinsModel(feat_dim=768, proj_hidden_dim=4096, proj_output_dim=1280)
+
+
+def get_training_config():
+    """Return training hyperparameters."""
+    return {
+        'pretrain_epochs': 130,
+        'linear_eval_epochs': 100,
+        'batch_size': 512,
+        'lr': 0.4,
+        'weight_decay': 1e-4,
+        'lambda_param': 5e-3,
+        'linear_lr': 0.1,
+        'linear_batch_size': 256,
+    }
+
+
+def get_augmentation():
+    """Return CIFAR-100 detail-preserving augmentation pipeline."""
+    mean = (0.5071, 0.4867, 0.4408)
+    std = (0.2675, 0.2565, 0.2761)
+
+    return transforms.Compose([
+        transforms.RandomResizedCrop(32, scale=(0.08, 1.0)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+        transforms.RandomGrayscale(p=0.2),
+        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 1.0))], p=0.15),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std),
+    ])

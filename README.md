@@ -10,8 +10,11 @@
 >
 > **🧪 Experimental explore run (not the main result)** — same loop and budget, only the Gemini prompt changed
 > (`--prompt-variant explore`: no "minimal change" guidance; lists other SSL methods / encoder changes; reports time used per run).
-> 46.77% → 61.44%, but mostly via a bigger backbone (see the disclosure).
-> [Review page (GitHub Pages)](https://peterchang1023.github.io/minimal-automated-AI-researcher/explore/) ·
+> 46.77% → 61.44% after 10 iterations, mostly via a bigger backbone (see the disclosure).
+> Continued to 20 iterations (`runs/flash35-e130-20iter-explore`, 120-min per-run limit): → **69.22%**,
+> but part of that gain comes from concatenating multi-stage features, which enlarges the linear-probe input (768 → 4032-d)
+> — allowed by the rules, but not a like-for-like comparison ([20-iter disclosure](runs/flash35-e130-20iter-explore/DISCLOSURE.md)).
+> [Review page, 20 iters (GitHub Pages)](https://peterchang1023.github.io/minimal-automated-AI-researcher/explore/) ·
 > [with comments (claude.ai)](https://claude.ai/artifact/FgAX3Z9UiLtA2iZprvLsuj) ·
 > [disclosure](runs/flash35-e130-10iter-explore/DISCLOSURE.md) · width ablation: [`runs/flash35-e130-10iter-explore_ablation_width1x`](runs/flash35-e130-10iter-explore_ablation_width1x/result.json)
 

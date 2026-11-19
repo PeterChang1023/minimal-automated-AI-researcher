@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Scaling the anti-aliased backbone depth from ResNet-26 ([3, 3, 3, 3] blocks) to a CIFAR-adapted ResNet-34 ([3, 4, 6, 3] basic blocks, 1.5x width, 768-dim features) will enhance semantic representation capacity and feature hierarchy—especially at the critical 8x8 spatial resolution in stage 3 (6 blocks)—improving linear evaluation top-1 accuracy under Decoupled Contrastive Loss (DCL).",
+  "rationale": "Experiments iter 3 (ResNet-18, 59.88%), iter 11 (ResNet-22 + BlurPool, 61.01%), and iter 12 (ResNet-26 + BlurPool, 61.44%) demonstrated consistent accuracy gains from scaling depth alongside anti-aliased downsampling. Note that iter 6 (ResNet-34) failed previously because of BatchNorm at the projection output and high solarization, not because of backbone depth. Retaining the optimal DCL setup, wider 4096 projection head, and detail-preserving augmentations from iter 12 while upgrading the backbone to ResNet-34 ([3, 4, 6, 3] blocks) is expected to further boost representation learning within the 120-minute compute budget (estimated runtime ~50 min vs 40.2 min for iter 12).",
+  "expected_effect": "Increases representation capacity and feature discriminability, pushing validation accuracy above 61.44%.",
+  "change_summary": "Upgraded backbone architecture from CIFARResNet26AntiAliased ([3, 3, 3, 3]) to CIFARResNet34AntiAliased ([3, 4, 6, 3] basic blocks, 1.5x width, 768-dim output). Retained BlurPool anti-aliasing, 4096-wide projection head, DCL loss (tau=0.10), and detail-preserving augmentations.",
+  "change_type": "structural",
+  "direction": "B"
+}

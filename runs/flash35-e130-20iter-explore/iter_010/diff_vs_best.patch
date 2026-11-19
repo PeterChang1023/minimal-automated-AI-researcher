@@ -1,0 +1,115 @@
+--- iter_003/algorithm.py (best)
++++ iter_010/algorithm.py
+@@ -1,11 +1,10 @@
+ """
+-Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL)
++Self-supervised learning algorithm: Decoupled Contrastive Loss with Queue Memory Bank (DCL-Q)
+ with Wider CIFAR-ResNet-18 Backbone.
+ 
+-DCL eliminates negative-positive term coupling in contrastive loss, ensuring
+-unsuppressed gradients for positive pair alignment. Combined with a 1.5x wider
+-ResNet-18 backbone (768-dim features), this increases representation capacity
+-for CIFAR-100.
++DCL-Q combines Decoupled Contrastive Loss (DCL) with a memory bank queue (4096 embeddings)
++to expand the negative representation space from 1022 to 5118 negative pairs per sample,
++enhancing representation uniformity and class separation on CIFAR-100.
+ """
+ import torch
+ import torch.nn as nn
+@@ -15,15 +14,39 @@
+ 
+ class BarlowTwinsLoss(nn.Module):
+     """
+-    Decoupled Contrastive Loss (DCL) implemented inside the BarlowTwinsLoss wrapper.
++    Decoupled Contrastive Loss with Queue Memory Bank (DCL-Q).
+     
+-    DCL removes positive similarity from the loss denominator, preventing high positive
+-    alignment from dampening its own gradient during optimization.
++    DCL removes positive similarity from the denominator to prevent gradient dampening,
++    while the queue buffer expands negative pair coverage across recent mini-batches.
+     """
+ 
+-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10):
++    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, queue_size=4096):
+         super().__init__()
+         self.temperature = temperature
++        self.queue_size = queue_size
++        self.embedding_dim = embedding_dim
++
++        # Register queue memory buffer and queue pointer
++        queue = F.normalize(torch.randn(queue_size, embedding_dim), dim=1)
++        self.register_buffer("queue", queue)
++        self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
++
++    @torch.no_grad()
++    def _dequeue_and_enqueue(self, keys):
++        """Enqueue new projection keys and dequeue oldest keys in FIFO fashion."""
++        batch_size = keys.shape[0]
++        ptr = int(self.queue_ptr.item())
++
++        if ptr + batch_size <= self.queue_size:
++            self.queue[ptr:ptr + batch_size] = keys
++            ptr = (ptr + batch_size) % self.queue_size
++        else:
++            overflow = (ptr + batch_size) - self.queue_size
++            self.queue[ptr:] = keys[:self.queue_size - ptr]
++            self.queue[:overflow] = keys[self.queue_size - ptr:]
++            ptr = overflow
++
++        self.queue_ptr[0] = ptr
+ 
+     def forward(self, z1, z2):
+         batch_size = z1.shape[0]
+@@ -32,17 +55,16 @@
+         z1_norm = F.normalize(z1, dim=1)
+         z2_norm = F.normalize(z2, dim=1)
+ 
+-        # Concatenate projections: shape [2 * batch_size, embedding_dim]
++        # Concatenate current batch projections: shape [2 * batch_size, embedding_dim]
+         z = torch.cat([z1_norm, z2_norm], dim=0)
+ 
+-        # Cosine similarity matrix scaled by temperature
+-        sim = torch.matmul(z, z.T) / self.temperature
+-
+-        # Extract positive pair similarities
+-        # Row i (0 <= i < B) pairs with i + B; row i (B <= i < 2B) pairs with i - B
++        # 1. Cosine similarity matrix for current batch scaled by temperature
++        sim_batch = torch.matmul(z, z.T) / self.temperature
++
++        # Extract positive pair similarities (z1_i with z2_i)
+         pos_sim = torch.cat([
+-            torch.diag(sim, batch_size),
+-            torch.diag(sim, -batch_size)
++            torch.diag(sim_batch, batch_size),
++            torch.diag(sim_batch, -batch_size)
+         ], dim=0)  # shape [2 * batch_size]
+ 
+         # Mask out self-similarity (diagonal) and positive pair similarity
+@@ -52,13 +74,21 @@
+         mask_pos[batch_size:, :batch_size] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
+ 
+         mask_neg = ~(mask_self | mask_pos)
+-
+-        # Mask non-negative entries with large negative value for logsumexp
+-        sim_neg = sim.masked_fill(~mask_neg, -1e9)
+-
+-        # Decoupled contrastive loss: - pos_sim + logsumexp(neg_sim)
+-        neg_logsumexp = torch.logsumexp(sim_neg, dim=1)
++        sim_batch_neg = sim_batch.masked_fill(~mask_neg, -1e9)
++
++        # 2. Similarity with queue negative keys: shape [2 * batch_size, queue_size]
++        sim_queue = torch.matmul(z, self.queue.clone().detach().T) / self.temperature
++
++        # Combine in-batch negative similarities and queue negative similarities
++        sim_all_neg = torch.cat([sim_batch_neg, sim_queue], dim=1)
++
++        # Decoupled contrastive loss: - pos_sim + logsumexp(all_negatives)
++        neg_logsumexp = torch.logsumexp(sim_all_neg, dim=1)
+         loss = (-pos_sim + neg_logsumexp).mean()
++
++        # Update memory queue with current batch projections if in training mode
++        if self.training:
++            self._dequeue_and_enqueue(z.detach())
+ 
+         return loss
+ 

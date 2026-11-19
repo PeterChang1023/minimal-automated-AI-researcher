@@ -1,0 +1,146 @@
+--- iter_000/algorithm.py (best)
++++ iter_001/algorithm.py
+@@ -1,20 +1,9 @@
+ """
+-Baseline self-supervised learning algorithm: Barlow Twins on CIFAR-100.
++VICReg (Variance-Invariance-Covariance Regularization) self-supervised learning for CIFAR-100.
+ 
+-Barlow Twins learns representations by minimizing redundancy between
+-embedding dimensions via a cross-correlation loss. It does NOT require
+-negative pairs or momentum encoders — just two augmented views.
+-
+-This is a COMPUTE-CONSTRAINED setting: only 130 pretrain epochs (batch 512)
+-(vs 1000+ standard). Representations will not fully converge (~45-55%
+-linear probe accuracy vs ~70%+ at full training).
+-
+-Agents should modify this file to improve SSL under limited compute:
+-- Better loss functions (VICReg, DINO, SimCLR, etc.)
+-- Better augmentation strategies
+-- Better projection head design
+-- Learning rate scheduling
+-- Multi-crop strategies
++Replaces Barlow Twins loss with VICReg to achieve faster convergence and better feature variance
++under compute-constrained pretraining (130 epochs). Also tailors data augmentation for 32x32 images
++by replacing heavy Gaussian blur with RandomSolarize.
+ """
+ import torch
+ import torch.nn as nn
+@@ -23,29 +12,49 @@
+ 
+ 
+ class BarlowTwinsLoss(nn.Module):
+-    """Barlow Twins loss: cross-correlation matrix → identity."""
++    """
++    VICReg Loss implementation wrapped inside the interface expected by the harness.
++    
++    VICReg regularizes three properties:
++    - Invariance (MSE between representations of augmented views)
++    - Variance (hinge loss on std per dimension >= 1)
++    - Covariance (decorrelating dimensions by penalizing off-diagonal covariances)
++    """
+ 
+-    def __init__(self, lambda_param=5e-3, embedding_dim=2048):
++    def __init__(self, lambda_param=5e-3, embedding_dim=2048, sim_coeff=25.0, std_coeff=25.0, cov_coeff=1.0):
+         super().__init__()
+-        self.lambda_param = lambda_param
+-        self.bn = nn.BatchNorm1d(embedding_dim, affine=False)
++        self.embedding_dim = embedding_dim
++        self.sim_coeff = sim_coeff
++        self.std_coeff = std_coeff
++        self.cov_coeff = cov_coeff
+ 
+     def forward(self, z1, z2):
+-        z1 = self.bn(z1)
+-        z2 = self.bn(z2)
+-        batch_size = z1.shape[0]
++        # 1. Invariance loss (MSE)
++        sim_loss = nn.functional.mse_loss(z1, z2)
+ 
+-        # Cross-correlation matrix
+-        c = z1.T @ z2 / batch_size
++        # 2. Variance loss (hinge loss on standard deviation per feature dimension)
++        std_z1 = torch.sqrt(z1.var(dim=0) + 1e-4)
++        std_z2 = torch.sqrt(z2.var(dim=0) + 1e-4)
++        std_loss = torch.mean(nn.functional.relu(1.0 - std_z1)) + torch.mean(nn.functional.relu(1.0 - std_z2))
+ 
+-        # Loss: on-diagonal → 1, off-diagonal → 0
+-        on_diag = (1 - c.diagonal()).pow(2).sum()
+-        off_diag = c.flatten()[:-1].view(c.shape[0] - 1, c.shape[0] + 1)[:, 1:].flatten().pow(2).sum()
+-        return on_diag + self.lambda_param * off_diag
++        # 3. Covariance loss (off-diagonal terms of covariance matrix)
++        N, D = z1.shape
++        z1_centered = z1 - z1.mean(dim=0)
++        z2_centered = z2 - z2.mean(dim=0)
++
++        cov_z1 = (z1_centered.T @ z1_centered) / (N - 1)
++        cov_z2 = (z2_centered.T @ z2_centered) / (N - 1)
++
++        diag_mask = ~torch.eye(D, dtype=torch.bool, device=z1.device)
++        cov_loss = (cov_z1[diag_mask].pow(2).sum() / D) + (cov_z2[diag_mask].pow(2).sum() / D)
++
++        # Weighted sum of losses
++        total_loss = self.sim_coeff * sim_loss + self.std_coeff * std_loss + self.cov_coeff * cov_loss
++        return total_loss
+ 
+ 
+ class ProjectionHead(nn.Module):
+-    """3-layer projection head for Barlow Twins."""
++    """3-layer projection head for VICReg (Linear -> BN -> ReLU -> Linear -> BN -> ReLU -> Linear)."""
+ 
+     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):
+         super().__init__()
+@@ -64,7 +73,7 @@
+ 
+ 
+ class BarlowTwinsModel(nn.Module):
+-    """ResNet-18 backbone + projection head for Barlow Twins."""
++    """ResNet-18 backbone + projection head for VICReg."""
+ 
+     def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):
+         super().__init__()
+@@ -85,35 +94,38 @@
+ 
+ 
+ def get_model():
+-    """Return Barlow Twins model."""
++    """Return model with backbone and projector."""
+     return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
+ 
+ 
+ def get_training_config():
+-    """Return Barlow Twins training config (compute-constrained)."""
++    """Return training config."""
+     return {
+         'pretrain_epochs': 130,
+         'linear_eval_epochs': 100,
+         'batch_size': 512,
+-        'lr': 0.4,
++        'lr': 0.3,
+         'weight_decay': 1e-4,
+-        'lambda_param': 5e-3,       # Barlow Twins off-diagonal penalty
++        'lambda_param': 5e-3,       # standard config key kept for compatibility
+         'linear_lr': 0.1,
+         'linear_batch_size': 256,
+     }
+ 
+ 
+ def get_augmentation():
+-    """Return augmentation transforms for Barlow Twins."""
++    """
++    Return CIFAR-100 tailored SSL augmentations.
++    Replaces heavy Gaussian blur with RandomSolarize suited for 32x32 low-resolution images.
++    """
+     mean = (0.5071, 0.4867, 0.4408)
+     std = (0.2675, 0.2565, 0.2761)
+ 
+     return transforms.Compose([
+         transforms.RandomResizedCrop(32, scale=(0.2, 1.0)),
+-        transforms.RandomHorizontalFlip(),
++        transforms.RandomHorizontalFlip(p=0.5),
+         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+         transforms.RandomGrayscale(p=0.2),
+-        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.5),
++        transforms.RandomSolarize(threshold=128, p=0.1),
+         transforms.ToTensor(),
+         transforms.Normalize(mean, std),
+     ])

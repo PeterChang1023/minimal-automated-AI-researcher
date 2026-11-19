@@ -1,0 +1,138 @@
+--- iter_023/algorithm.py (best)
++++ iter_024/algorithm.py
+@@ -1,10 +1,11 @@
+ """
+-Self-supervised learning algorithm: Dual-Pooled Multi-Scale Anti-Aliased ResNet-26 Backbone
+-with Joint Decoupled Contrastive Learning (DCL) and Barlow Twins Feature Decorrelation.
+-
+-Combines Stage 3 (8x8, 384-dim) and Stage 4 (4x4, 768-dim) features using both
+-Global Average Pooling and Global Max Pooling to form a 2304-dim multi-scale representation,
+-trained via joint sample contrast (DCL) and feature decorrelation (Barlow Twins).
++Self-supervised learning algorithm: 1.75x Width Anti-Aliased ResNet-26 Backbone with
++Triple-Pooled Multi-Scale Aggregation (Avg + GeM + Max) and Joint DCL + Barlow Twins Loss.
++
++Combines Stage 3 (8x8, 448-dim) and Stage 4 (4x4, 896-dim) features using
++Global Average Pooling, Generalized Mean Pooling (p=3.0), and Global Max Pooling
++to form a 4032-dim multi-scale representation, trained via joint sample contrast (DCL)
++and feature decorrelation (Barlow Twins).
+ """
+ import math
+ import torch
+@@ -98,6 +99,22 @@
+ 
+     def forward(self, x):
+         return F.conv2d(x, self.kernel, stride=self.stride, padding=1, groups=x.shape[1])
++
++
++class GeMPool2d(nn.Module):
++    """
++    Generalized Mean (GeM) Pooling with power p=3.0.
++    Bridges Average Pooling (p=1) and Max Pooling (p->infinity) to emphasize
++    salient feature regions smoothly.
++    """
++
++    def __init__(self, p=3.0, eps=1e-6):
++        super().__init__()
++        self.p = p
++        self.eps = eps
++
++    def forward(self, x):
++        return x.clamp(min=self.eps).pow(self.p).mean(dim=(-2, -1)).pow(1.0 / self.p)
+ 
+ 
+ class AntiAliasedBasicBlock(nn.Module):
+@@ -141,19 +158,19 @@
+         return out
+ 
+ 
+-class DualPooledMultiScaleCIFARResNet26(nn.Module):
+-    """
+-    CIFAR-adapted ResNet-26 ([3, 3, 3, 3] blocks) with 1.5x width multiplier
+-    (channels [96, 192, 384, 768]) and Dual-Pooled Multi-Scale Feature Aggregation.
+-
+-    Concatenates Global Average Pooled and Global Max Pooled features from both
+-    Stage 3 (384-dim, 8x8) and Stage 4 (768-dim, 4x4) into a 2304-dim representation
++class TriplePooledMultiScaleCIFARResNet26(nn.Module):
++    """
++    CIFAR-adapted ResNet-26 ([3, 3, 3, 3] blocks) with 1.75x width multiplier
++    (channels [112, 224, 448, 896]) and Triple-Pooled Multi-Scale Feature Aggregation.
++
++    Concatenates Global Average Pooled, Generalized Mean Pooled (p=3.0), and Global Max Pooled
++    features from both Stage 3 (448-dim, 8x8) and Stage 4 (896-dim, 4x4) into a 4032-dim representation
+     standardized via BatchNorm1d.
+     """
+ 
+-    def __init__(self, width_mult=1.5):
+-        super().__init__()
+-        base_channels = [int(c * width_mult) for c in [64, 128, 256, 512]]  # [96, 192, 384, 768]
++    def __init__(self, width_mult=1.75):
++        super().__init__()
++        base_channels = [int(c * width_mult) for c in [64, 128, 256, 512]]  # [112, 224, 448, 896]
+         self.in_planes = base_channels[0]
+ 
+         # CIFAR stem: 3x3 conv, stride 1, no maxpool
+@@ -167,10 +184,11 @@
+         self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 3, stride=2)
+ 
+         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
++        self.gempool = GeMPool2d(p=3.0)
+         self.maxpool = nn.AdaptiveMaxPool2d((1, 1))
+ 
+-        # Output feature dimension: (384 + 384) [stage 3] + (768 + 768) [stage 4] = 2304
+-        out_dim = (base_channels[2] + base_channels[3]) * 2
++        # Output feature dimension: 3 * 448 [stage 3] + 3 * 896 [stage 4] = 1344 + 2688 = 4032
++        out_dim = (base_channels[2] + base_channels[3]) * 3
+         self.bn_out = nn.BatchNorm1d(out_dim)
+ 
+     def _make_layer(self, block, planes, num_blocks, stride):
+@@ -189,18 +207,21 @@
+         stage4_out = self.layer4(stage3_out)
+ 
+         f3_avg = torch.flatten(self.avgpool(stage3_out), 1)
++        f3_gem = self.gempool(stage3_out)
+         f3_max = torch.flatten(self.maxpool(stage3_out), 1)
++
+         f4_avg = torch.flatten(self.avgpool(stage4_out), 1)
++        f4_gem = self.gempool(stage4_out)
+         f4_max = torch.flatten(self.maxpool(stage4_out), 1)
+ 
+-        f_multi = torch.cat([f3_avg, f3_max, f4_avg, f4_max], dim=1)
++        f_multi = torch.cat([f3_avg, f3_gem, f3_max, f4_avg, f4_gem, f4_max], dim=1)
+         return self.bn_out(f_multi)
+ 
+ 
+ class ProjectionHead(nn.Module):
+-    """3-layer projection head adapted for 2304-dim input (2304 -> 4096 -> 4096 -> 2048)."""
+-
+-    def __init__(self, input_dim=2304, hidden_dim=4096, output_dim=2048):
++    """3-layer projection head adapted for 4032-dim input (4032 -> 4096 -> 4096 -> 2048)."""
++
++    def __init__(self, input_dim=4032, hidden_dim=4096, output_dim=2048):
+         super().__init__()
+         self.net = nn.Sequential(
+             nn.Linear(input_dim, hidden_dim),
+@@ -217,12 +238,12 @@
+ 
+ 
+ class BarlowTwinsModel(nn.Module):
+-    """Dual-Pooled Multi-Scale ResNet-26 Anti-Aliased backbone (2304-dim) + 4096-wide projection head."""
++    """Triple-Pooled Multi-Scale ResNet-26 Anti-Aliased backbone (1.75x width, 4032-dim) + 4096-wide projection head."""
+ 
+     def __init__(self, proj_hidden_dim=4096, proj_output_dim=2048):
+         super().__init__()
+-        self.backbone = DualPooledMultiScaleCIFARResNet26(width_mult=1.5)
+-        self.backbone_dim = 2304
++        self.backbone = TriplePooledMultiScaleCIFARResNet26(width_mult=1.75)
++        self.backbone_dim = 4032
+         self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
+ 
+     def forward(self, x):
+@@ -232,7 +253,7 @@
+ 
+ 
+ def get_model():
+-    """Return model instance with dual-pooled multi-scale anti-aliased ResNet-26 backbone."""
++    """Return model instance with triple-pooled multi-scale anti-aliased 1.75x ResNet-26 backbone."""
+     return BarlowTwinsModel(proj_hidden_dim=4096, proj_output_dim=2048)
+ 
+ 

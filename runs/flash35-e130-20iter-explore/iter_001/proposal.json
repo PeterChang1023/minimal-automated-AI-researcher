@@ -1,0 +1,8 @@
+{
+  "hypothesis": "Replacing Barlow Twins loss with VICReg (Variance-Invariance-Covariance Regularization) and tuning augmentations for 32x32 resolution (replacing heavy Gaussian blur with mild solarization) will prevent feature collapse more effectively and accelerate representation learning under a 130-epoch budget.",
+  "rationale": "In short pretraining budgets (130 epochs) on 32x32 CIFAR images, Barlow Twins' batch-normalized cross-correlation with fixed off-diagonal penalty (0.005) can suffer from slow feature decorrelation. VICReg explicitly enforces feature variance (std >= 1 per dim across batch) and decorrelation without batch normalization on projections, leading to faster convergence. Furthermore, standard Gaussian blur (kernel 3, sigma 2.0) on 32x32 images destroys critical fine-grained visual details; removing heavy blur and adding RandomSolarize is known to substantially benefit CIFAR SSL.",
+  "expected_effect": "Improve linear probe top-1 accuracy over the 0.4677 baseline by 3-6 percentage points due to faster representation learning and better preservation of 32x32 image features.",
+  "change_summary": "Implemented VICReg objective in BarlowTwinsLoss (sim_coeff=25, std_coeff=25, cov_coeff=1); updated augmentations for 32x32 images by replacing GaussianBlur with RandomSolarize; adjusted pretrain LR to 0.3.",
+  "change_type": "structural",
+  "direction": "A"
+}
