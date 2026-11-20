@@ -7,47 +7,47 @@ Train: 50000, Val portion: 3000, Hidden test: 7000, Visible pool: 53000
 Agent train: 49979, Agent val: 3021 (val_ratio=0.057, val_seed=42)
 
 === Pretraining Barlow Twins for 130 epochs ===
-[harness] epoch 1: mean pretrain loss 7.5584
-Pretrain Epoch 1/130: Loss=7.5584
-[harness] epoch 5: mean pretrain loss 6.1271
-[harness] epoch 10: mean pretrain loss 4.6686
-[harness] epoch 15: mean pretrain loss 3.0628
-[harness] epoch 20: mean pretrain loss 2.2662
-Pretrain Epoch 20/130: Loss=2.2662
-[harness] epoch 25: mean pretrain loss 1.8429
-[harness] epoch 30: mean pretrain loss 1.5434
-[harness] epoch 35: mean pretrain loss 1.3496
-[harness] epoch 40: mean pretrain loss 1.1747
-Pretrain Epoch 40/130: Loss=1.1747
-[harness] epoch 45: mean pretrain loss 1.0358
-[harness] epoch 50: mean pretrain loss 0.9600
-[harness] epoch 55: mean pretrain loss 0.8449
-[harness] epoch 60: mean pretrain loss 0.7553
-Pretrain Epoch 60/130: Loss=0.7553
-[harness] epoch 65: mean pretrain loss 0.6589
-[harness] epoch 70: mean pretrain loss 0.5845
-[harness] epoch 75: mean pretrain loss 0.4806
-[harness] epoch 80: mean pretrain loss 0.3933
-Pretrain Epoch 80/130: Loss=0.3933
-[harness] epoch 85: mean pretrain loss 0.3241
-[harness] epoch 90: mean pretrain loss 0.2100
-[harness] epoch 95: mean pretrain loss 0.1157
-[harness] epoch 100: mean pretrain loss 0.0364
-Pretrain Epoch 100/130: Loss=0.0364
-[harness] epoch 105: mean pretrain loss -0.0454
-[harness] epoch 110: mean pretrain loss -0.1202
-[harness] epoch 115: mean pretrain loss -0.1839
-[harness] epoch 120: mean pretrain loss -0.2421
-Pretrain Epoch 120/130: Loss=-0.2421
-[harness] epoch 125: mean pretrain loss -0.2679
-[harness] epoch 130: mean pretrain loss -0.2734
+[harness] epoch 1: mean pretrain loss 6.4633
+Pretrain Epoch 1/130: Loss=6.4633
+[harness] epoch 5: mean pretrain loss 4.6860
+[harness] epoch 10: mean pretrain loss 2.7928
+[harness] epoch 15: mean pretrain loss 1.9810
+[harness] epoch 20: mean pretrain loss 1.5747
+Pretrain Epoch 20/130: Loss=1.5747
+[harness] epoch 25: mean pretrain loss 1.3493
+[harness] epoch 30: mean pretrain loss 1.1468
+[harness] epoch 35: mean pretrain loss 1.0123
+[harness] epoch 40: mean pretrain loss 0.8903
+Pretrain Epoch 40/130: Loss=0.8903
+[harness] epoch 45: mean pretrain loss 0.8026
+[harness] epoch 50: mean pretrain loss 0.7016
+[harness] epoch 55: mean pretrain loss 0.6405
+[harness] epoch 60: mean pretrain loss 0.5417
+Pretrain Epoch 60/130: Loss=0.5417
+[harness] epoch 65: mean pretrain loss 0.4660
+[harness] epoch 70: mean pretrain loss 0.4052
+[harness] epoch 75: mean pretrain loss 0.2915
+[harness] epoch 80: mean pretrain loss 0.2379
+Pretrain Epoch 80/130: Loss=0.2379
+[harness] epoch 85: mean pretrain loss 0.1584
+[harness] epoch 90: mean pretrain loss 0.0636
+[harness] epoch 95: mean pretrain loss -0.0139
+[harness] epoch 100: mean pretrain loss -0.1042
+Pretrain Epoch 100/130: Loss=-0.1042
+[harness] epoch 105: mean pretrain loss -0.1812
+[harness] epoch 110: mean pretrain loss -0.2658
+[harness] epoch 115: mean pretrain loss -0.3313
+[harness] epoch 120: mean pretrain loss -0.3706
+Pretrain Epoch 120/130: Loss=-0.3706
+[harness] epoch 125: mean pretrain loss -0.3914
+[harness] epoch 130: mean pretrain loss -0.4213
 Saved pretrained backbone to model_checkpoint/backbone.pt
 
 === Linear evaluation (100 epochs, seed=100) ===
 
 === VAL Results ===
-  Linear probe accuracy: 0.613042
+  Linear probe accuracy: 0.662032
 
 Saved results to results_tmp/val_info.json
-[harness] official evaluation wall time: 2535.3s
-[harness] peak GPU memory allocated: 13.3 GB
+[harness] official evaluation wall time: 2465.2s
+[harness] peak GPU memory allocated: 13.2 GB

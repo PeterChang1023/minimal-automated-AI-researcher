@@ -14,6 +14,7 @@
 > Continued to 20 iterations (`runs/flash35-e130-20iter-explore`, 120-min per-run limit): → **69.22%**,
 > but part of that gain comes from concatenating multi-stage features, which enlarges the linear-probe input (baseline 512-d → 4032-d)
 > — allowed by the rules, but not a like-for-like comparison ([20-iter disclosure](runs/flash35-e130-20iter-explore/DISCLOSURE.md)).
+> Iterations are renumbered 0–20: 4 Gemini API failures (no training) were removed, and iter 11 was re-run after first exceeding the 60-min limit.
 > [Review page, 20 iters (GitHub Pages)](https://peterchang1023.github.io/minimal-automated-AI-researcher/explore/) ·
 > [with comments (claude.ai)](https://claude.ai/artifact/FgAX3Z9UiLtA2iZprvLsuj) ·
 > [disclosure](runs/flash35-e130-10iter-explore/DISCLOSURE.md) · width ablation: [`runs/flash35-e130-10iter-explore_ablation_width1x`](runs/flash35-e130-10iter-explore_ablation_width1x/result.json)

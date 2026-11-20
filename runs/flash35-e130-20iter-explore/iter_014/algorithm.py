@@ -1,10 +1,10 @@
 """
-Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL)
-with Anti-Aliased CIFAR-ResNet-34 Backbone and Expanded Projection Head.
+Self-supervised learning algorithm: Joint Decoupled Contrastive Learning (DCL)
+and Barlow Twins Feature Decorrelation Loss with Anti-Aliased ResNet-26 Backbone.
 
-Integrates BlurPool anti-aliased downsampling into a 1.5x wider ResNet-34
-backbone ([3, 4, 6, 3] basic blocks, 768-dim features) paired with a 4096-wide
-projection head and detail-preserving augmentations for CIFAR-100.
+Combines sample-level instance discrimination (DCL) with channel-level feature
+decorrelation (Barlow Twins cross-correlation penalty) on an anti-aliased 1.5x
+ResNet-26 backbone ([3, 3, 3, 3] blocks, 768-dim features) and 4096-wide projection head.
 """
 import math
 import torch
@@ -15,51 +15,68 @@ import torchvision.transforms as transforms
 
 class BarlowTwinsLoss(nn.Module):
     """
-    Decoupled Contrastive Loss (DCL) implemented inside the BarlowTwinsLoss wrapper.
+    Joint Sample-Dimensional Objective: Decoupled Contrastive Loss (DCL)
+    plus Barlow Twins Feature Decorrelation Regularization.
 
-    DCL removes positive similarity from the loss denominator, preventing high positive
-    alignment from dampening its own gradient during optimization.
+    - DCL ensures sample-level repulsion without positive dampening.
+    - Barlow Twins decorrelation forces projection dimensions to be orthogonal,
+      maximizing channel-wise feature entropy and representation rank.
     """
 
-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10):
+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, bt_weight=0.5):
         super().__init__()
         self.temperature = temperature
+        self.lambda_param = lambda_param
+        self.embedding_dim = embedding_dim
+        self.bt_weight = bt_weight
 
     def forward(self, z1, z2):
         batch_size = z1.shape[0]
 
-        # L2-normalize projection vectors
+        # -------------------------------------------------------------
+        # 1. Decoupled Contrastive Loss (Sample-level uniformity)
+        # -------------------------------------------------------------
         z1_norm = F.normalize(z1, dim=1)
         z2_norm = F.normalize(z2, dim=1)
 
-        # Concatenate projections: shape [2 * batch_size, embedding_dim]
         z = torch.cat([z1_norm, z2_norm], dim=0)
-
-        # Cosine similarity matrix scaled by temperature
         sim = torch.matmul(z, z.T) / self.temperature
 
-        # Extract positive pair similarities
         pos_sim = torch.cat([
             torch.diag(sim, batch_size),
             torch.diag(sim, -batch_size)
-        ], dim=0)  # shape [2 * batch_size]
+        ], dim=0)
 
-        # Mask out self-similarity (diagonal) and positive pair similarity
         mask_self = torch.eye(2 * batch_size, dtype=torch.bool, device=z.device)
         mask_pos = torch.zeros((2 * batch_size, 2 * batch_size), dtype=torch.bool, device=z.device)
         mask_pos[:batch_size, batch_size:] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
         mask_pos[batch_size:, :batch_size] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
 
         mask_neg = ~(mask_self | mask_pos)
-
-        # Mask non-negative entries with large negative value for logsumexp
         sim_neg = sim.masked_fill(~mask_neg, -1e9)
-
-        # Decoupled contrastive loss: - pos_sim + logsumexp(neg_sim)
         neg_logsumexp = torch.logsumexp(sim_neg, dim=1)
-        loss = (-pos_sim + neg_logsumexp).mean()
 
-        return loss
+        dcl_loss = (-pos_sim + neg_logsumexp).mean()
+
+        # -------------------------------------------------------------
+        # 2. Barlow Twins Feature Decorrelation (Channel-level independence)
+        # -------------------------------------------------------------
+        z1_bn = (z1 - z1.mean(dim=0)) / (z1.std(dim=0) + 1e-5)
+        z2_bn = (z2 - z2.mean(dim=0)) / (z2.std(dim=0) + 1e-5)
+
+        c = torch.matmul(z1_bn.T, z2_bn) / batch_size
+
+        on_diag = (torch.diagonal(c) - 1.0).pow(2).sum()
+        off_diag_mask = ~torch.eye(self.embedding_dim, dtype=torch.bool, device=z.device)
+        off_diag = (c[off_diag_mask]).pow(2).sum()
+
+        bt_loss = (on_diag + self.lambda_param * off_diag) / self.embedding_dim
+
+        # -------------------------------------------------------------
+        # Joint Objective
+        # -------------------------------------------------------------
+        total_loss = dcl_loss + self.bt_weight * bt_loss
+        return total_loss
 
 
 class BlurPool2d(nn.Module):
@@ -124,9 +141,9 @@ class AntiAliasedBasicBlock(nn.Module):
         return out
 
 
-class CIFARResNet34AntiAliased(nn.Module):
+class CIFARResNet26AntiAliased(nn.Module):
     """
-    CIFAR-adapted ResNet-34 ([3, 4, 6, 3] blocks) with 1.5x width multiplier
+    CIFAR-adapted ResNet-26 ([3, 3, 3, 3] blocks) with 1.5x width multiplier
     (channels [96, 192, 384, 768]) and anti-aliased downsampling.
     """
 
@@ -139,10 +156,10 @@ class CIFARResNet34AntiAliased(nn.Module):
         self.conv1 = nn.Conv2d(3, base_channels[0], kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(base_channels[0])
 
-        # Layer depths: [3, 4, 6, 3] = ResNet-34
+        # Layer depths: [3, 3, 3, 3] = ResNet-26
         self.layer1 = self._make_layer(AntiAliasedBasicBlock, base_channels[0], 3, stride=1)
-        self.layer2 = self._make_layer(AntiAliasedBasicBlock, base_channels[1], 4, stride=2)
-        self.layer3 = self._make_layer(AntiAliasedBasicBlock, base_channels[2], 6, stride=2)
+        self.layer2 = self._make_layer(AntiAliasedBasicBlock, base_channels[1], 3, stride=2)
+        self.layer3 = self._make_layer(AntiAliasedBasicBlock, base_channels[2], 3, stride=2)
         self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 3, stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -185,11 +202,11 @@ class ProjectionHead(nn.Module):
 
 
 class BarlowTwinsModel(nn.Module):
-    """CIFAR ResNet-34 Anti-Aliased backbone + 4096-wide 3-layer projection head."""
+    """CIFAR ResNet-26 Anti-Aliased backbone + 4096-wide 3-layer projection head."""
 
     def __init__(self, proj_hidden_dim=4096, proj_output_dim=2048):
         super().__init__()
-        self.backbone = CIFARResNet34AntiAliased(width_mult=1.5)
+        self.backbone = CIFARResNet26AntiAliased(width_mult=1.5)
         self.backbone_dim = 768
         self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
 
@@ -200,7 +217,7 @@ class BarlowTwinsModel(nn.Module):
 
 
 def get_model():
-    """Return model instance with anti-aliased ResNet-34 backbone."""
+    """Return model instance with anti-aliased ResNet-26 backbone."""
     return BarlowTwinsModel(proj_hidden_dim=4096, proj_output_dim=2048)
 
 

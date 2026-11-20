@@ -1,6 +1,6 @@
 --- baseline/algorithm.py
-+++ iter_016/algorithm.py
-@@ -1,53 +1,191 @@
++++ iter_019/algorithm.py
+@@ -1,53 +1,212 @@
  """
 -Baseline self-supervised learning algorithm: Barlow Twins on CIFAR-100.
 -
@@ -18,12 +18,12 @@
 -- Better projection head design
 -- Learning rate scheduling
 -- Multi-crop strategies
-+Self-supervised learning algorithm: Joint Decoupled Contrastive Learning (DCL)
-+and Barlow Twins Feature Decorrelation Loss with Anti-Aliased ResNet-26 Backbone.
++Self-supervised learning algorithm: Dual-Space Decorrelation (DSD) Loss
++with Anti-Aliased ResNet-26 Backbone.
 +
-+Combines sample-level instance discrimination (DCL) with channel-level feature
-+decorrelation (Barlow Twins cross-correlation penalty) on an anti-aliased 1.5x
-+ResNet-26 backbone ([3, 3, 3, 3] blocks, 768-dim features) and 4096-wide projection head.
++Combines sample-level instance discrimination (DCL) on projection vectors
++with dual-space channel decorrelation (Barlow Twins cross-correlation penalty
++applied directly to both 768-dim backbone features and 1280-dim projection vectors).
  """
 +import math
  import torch
@@ -39,21 +39,26 @@
 -    def __init__(self, lambda_param=5e-3, embedding_dim=2048):
 -        super().__init__()
 +    """
-+    Joint Sample-Dimensional Objective: Decoupled Contrastive Loss (DCL)
-+    plus Barlow Twins Feature Decorrelation Regularization.
++    Dual-Space Decorrelation (DSD) Loss:
++    - Decoupled Contrastive Loss (DCL, tau=0.10) on projection vectors p (1280-d).
++    - Barlow Twins decorrelation penalty on projection vectors p (1280-d).
++    - Direct Barlow Twins decorrelation penalty on backbone features f (768-d).
 +
-+    - DCL ensures sample-level repulsion without positive dampening.
-+    - Barlow Twins decorrelation forces projection dimensions to be orthogonal,
-+      maximizing channel-wise feature entropy and representation rank.
++    This enforces maximum channel entropy and orthogonality directly inside
++    the backbone feature space evaluated by the downstream linear probe.
 +    """
 +
-+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, bt_weight=0.5):
++    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10,
++                 bt_weight_proj=0.5, bt_weight_feat=0.5, feat_dim=768):
 +        super().__init__()
 +        self.temperature = temperature
          self.lambda_param = lambda_param
 -        self.bn = nn.BatchNorm1d(embedding_dim, affine=False)
 +        self.embedding_dim = embedding_dim
-+        self.bt_weight = bt_weight
++        self.bt_weight_proj = bt_weight_proj
++        self.bt_weight_feat = bt_weight_feat
++        self.feat_dim = feat_dim
++        self.proj_dim = embedding_dim - feat_dim  # 1280
  
      def forward(self, z1, z2):
 -        z1 = self.bn(z1)
@@ -67,24 +72,28 @@
 -        on_diag = (1 - c.diagonal()).pow(2).sum()
 -        off_diag = c.flatten()[:-1].view(c.shape[0] - 1, c.shape[0] + 1)[:, 1:].flatten().pow(2).sum()
 -        return on_diag + self.lambda_param * off_diag
-+        # -------------------------------------------------------------
-+        # 1. Decoupled Contrastive Loss (Sample-level uniformity)
-+        # -------------------------------------------------------------
-+        z1_norm = F.normalize(z1, dim=1)
-+        z2_norm = F.normalize(z2, dim=1)
++        # Unpack 2048-d vectors into backbone features (768-d) and projection outputs (1280-d)
++        f1, p1 = z1[:, :self.feat_dim], z1[:, self.feat_dim:]
++        f2, p2 = z2[:, :self.feat_dim], z2[:, self.feat_dim:]
 +
-+        z = torch.cat([z1_norm, z2_norm], dim=0)
-+        sim = torch.matmul(z, z.T) / self.temperature
++        # -------------------------------------------------------------
++        # 1. Decoupled Contrastive Loss (DCL) on Projection Vectors (1280-d)
++        # -------------------------------------------------------------
++        p1_norm = F.normalize(p1, dim=1)
++        p2_norm = F.normalize(p2, dim=1)
++
++        p_norm = torch.cat([p1_norm, p2_norm], dim=0)
++        sim = torch.matmul(p_norm, p_norm.T) / self.temperature
 +
 +        pos_sim = torch.cat([
 +            torch.diag(sim, batch_size),
 +            torch.diag(sim, -batch_size)
 +        ], dim=0)
 +
-+        mask_self = torch.eye(2 * batch_size, dtype=torch.bool, device=z.device)
-+        mask_pos = torch.zeros((2 * batch_size, 2 * batch_size), dtype=torch.bool, device=z.device)
-+        mask_pos[:batch_size, batch_size:] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
-+        mask_pos[batch_size:, :batch_size] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
++        mask_self = torch.eye(2 * batch_size, dtype=torch.bool, device=z1.device)
++        mask_pos = torch.zeros((2 * batch_size, 2 * batch_size), dtype=torch.bool, device=z1.device)
++        mask_pos[:batch_size, batch_size:] = torch.eye(batch_size, dtype=torch.bool, device=z1.device)
++        mask_pos[batch_size:, :batch_size] = torch.eye(batch_size, dtype=torch.bool, device=z1.device)
 +
 +        mask_neg = ~(mask_self | mask_pos)
 +        sim_neg = sim.masked_fill(~mask_neg, -1e9)
@@ -93,23 +102,35 @@
 +        dcl_loss = (-pos_sim + neg_logsumexp).mean()
 +
 +        # -------------------------------------------------------------
-+        # 2. Barlow Twins Feature Decorrelation (Channel-level independence)
++        # 2. Barlow Twins Projection Decorrelation (1280-d)
 +        # -------------------------------------------------------------
-+        z1_bn = (z1 - z1.mean(dim=0)) / (z1.std(dim=0) + 1e-5)
-+        z2_bn = (z2 - z2.mean(dim=0)) / (z2.std(dim=0) + 1e-5)
++        p1_bn = (p1 - p1.mean(dim=0)) / (p1.std(dim=0) + 1e-5)
++        p2_bn = (p2 - p2.mean(dim=0)) / (p2.std(dim=0) + 1e-5)
 +
-+        c = torch.matmul(z1_bn.T, z2_bn) / batch_size
++        c_p = torch.matmul(p1_bn.T, p2_bn) / batch_size
++        on_diag_p = (torch.diagonal(c_p) - 1.0).pow(2).sum()
++        off_diag_mask_p = ~torch.eye(self.proj_dim, dtype=torch.bool, device=z1.device)
++        off_diag_p = (c_p[off_diag_mask_p]).pow(2).sum()
 +
-+        on_diag = (torch.diagonal(c) - 1.0).pow(2).sum()
-+        off_diag_mask = ~torch.eye(self.embedding_dim, dtype=torch.bool, device=z.device)
-+        off_diag = (c[off_diag_mask]).pow(2).sum()
-+
-+        bt_loss = (on_diag + self.lambda_param * off_diag) / self.embedding_dim
++        bt_proj_loss = (on_diag_p + self.lambda_param * off_diag_p) / self.proj_dim
 +
 +        # -------------------------------------------------------------
-+        # Joint Objective
++        # 3. Direct Backbone Feature Decorrelation (768-d)
 +        # -------------------------------------------------------------
-+        total_loss = dcl_loss + self.bt_weight * bt_loss
++        f1_bn = (f1 - f1.mean(dim=0)) / (f1.std(dim=0) + 1e-5)
++        f2_bn = (f2 - f2.mean(dim=0)) / (f2.std(dim=0) + 1e-5)
++
++        c_f = torch.matmul(f1_bn.T, f2_bn) / batch_size
++        on_diag_f = (torch.diagonal(c_f) - 1.0).pow(2).sum()
++        off_diag_mask_f = ~torch.eye(self.feat_dim, dtype=torch.bool, device=z1.device)
++        off_diag_f = (c_f[off_diag_mask_f]).pow(2).sum()
++
++        bt_feat_loss = (on_diag_f + self.lambda_param * off_diag_f) / self.feat_dim
++
++        # -------------------------------------------------------------
++        # Total Dual-Space Loss
++        # -------------------------------------------------------------
++        total_loss = dcl_loss + self.bt_weight_proj * bt_proj_loss + self.bt_weight_feat * bt_feat_loss
 +        return total_loss
 +
 +
@@ -220,13 +241,13 @@
 -    """3-layer projection head for Barlow Twins."""
 -
 -    def __init__(self, input_dim=512, hidden_dim=2048, output_dim=2048):
-+    """Wider 3-layer projection head (768 -> 4096 -> 4096 -> 2048)."""
++    """3-layer projection head (768 -> 4096 -> 4096 -> 1280)."""
 +
-+    def __init__(self, input_dim=768, hidden_dim=4096, output_dim=2048):
++    def __init__(self, input_dim=768, hidden_dim=4096, output_dim=1280):
          super().__init__()
          self.net = nn.Sequential(
              nn.Linear(input_dim, hidden_dim),
-@@ -64,18 +202,12 @@
+@@ -64,56 +223,55 @@
  
  
  class BarlowTwinsModel(nn.Module):
@@ -242,23 +263,32 @@
 -        backbone.conv1 = nn.Conv2d(3, 64, 3, 1, 1, bias=False)
 -        backbone.maxpool = nn.Identity()
 -        self.backbone = backbone
-+    """CIFAR ResNet-26 Anti-Aliased backbone + 4096-wide 3-layer projection head."""
++    """
++    CIFAR ResNet-26 Anti-Aliased backbone + Dual-Space Projection Output.
++    Packs 768-d backbone features and 1280-d projection head outputs into
++    the 2048-d tensor returned to the official training loop.
++    """
 +
-+    def __init__(self, proj_hidden_dim=4096, proj_output_dim=2048):
++    def __init__(self, feat_dim=768, proj_hidden_dim=4096, proj_output_dim=1280):
 +        super().__init__()
 +        self.backbone = CIFARResNet26AntiAliased(width_mult=1.5)
-+        self.backbone_dim = 768
++        self.backbone_dim = feat_dim
          self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
  
      def forward(self, x):
-@@ -85,35 +217,35 @@
+-        features = self.backbone(x)
+-        projections = self.projector(features)
++        features = self.backbone(x)  # [B, 768]
++        proj_out = self.projector(features)  # [B, 1280]
++        projections = torch.cat([features, proj_out], dim=1)  # [B, 2048]
+         return features, projections
  
  
  def get_model():
 -    """Return Barlow Twins model."""
 -    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
-+    """Return model instance with anti-aliased ResNet-26 backbone."""
-+    return BarlowTwinsModel(proj_hidden_dim=4096, proj_output_dim=2048)
++    """Return model instance with Dual-Space output format."""
++    return BarlowTwinsModel(feat_dim=768, proj_hidden_dim=4096, proj_output_dim=1280)
  
  
  def get_training_config():

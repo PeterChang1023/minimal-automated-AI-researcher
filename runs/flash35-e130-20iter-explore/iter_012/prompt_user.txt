@@ -14,7 +14,7 @@ pretraining hyperparameters lr / weight_decay / lambda_param / batch_size (<= 51
   linear_batch_size=256, on frozen `model.backbone` features.
 - Train/val split: split_config.json (val_ratio=0.057, val_seed=42) — fixed.
 - Seeds: the official script calls set_seed(42); linear-probe seed 100.
-- Wall-clock timeout per experiment: 60.0 minutes.
+- Wall-clock timeout per experiment: 120.0 minutes.
 
 ## Interface the official script relies on (must be kept)
 - get_model() -> nn.Module with attributes .backbone, .projector, .backbone_dim;
@@ -57,14 +57,14 @@ Categories A and B are STRUCTURAL changes; C-E are TUNING.
 
 ## Scores and compute under this budget
 - baseline val acc: 0.4677
-- current best val acc: 0.6101 (iter 11)
-- per-experiment time limit: 60.0 min. Measured wall-clock of completed runs: last 34.3 min, max 34.3 min (pretrain + linear eval) -> about 26 min of headroom (57% of the limit used). Heavier methods (bigger backbone, momentum encoder, extra heads) are affordable if they stay inside the limit; a timeout counts as a failed experiment.
+- current best val acc: 0.6144 (iter 12)
+- per-experiment time limit: 120.0 min. Measured wall-clock of completed runs: last 39.8 min, max 40.2 min (pretrain + linear eval) -> about 80 min of headroom (34% of the limit used). Heavier methods (bigger backbone, momentum encoder, extra heads) are affordable if they stay inside the limit; a timeout counts as a failed experiment.
 - acceptance rule (program-checked): a candidate replaces the best only if it runs successfully and its val acc is STRICTLY higher than the current best.
 
 ## Plateau rule (detected by the program)
 If the last 3 experiments all landed within +/-1.2 pts of the best, the next experiment MUST be a structural change (category A or B).
 Status: no plateau right now; you are free to choose.
-So far 9 of 9 experiments were structural.
+So far 11 of 11 experiments were structural.
 
 ## History of experiments (oldest first)
 - iter   0 | baseline | status=ok | val_acc=0.4677 | decision=baseline | wall=17.9 min
@@ -121,17 +121,28 @@ So far 9 of 9 experiments were structural.
 2. Upgraded backbone to a CIFAR-adapted ResNet-22 with depths [2, 3, 3, 2] and 1.5x width multiplier (channels [96, 192, 384, 768], backbone_dim=768).
 3. Retained Decoupled Contrastive Loss (DCL, tau=0.10), 3-layer projection head, and standard training hyperparameters.
     feedback: ACCEPTED: val_acc 0.6101 > best 0.5988 (+1.13 pts). Now the best.
+- iter  12 | candidate | status=ok | val_acc=0.6144 | decision=accepted | wall=40.2 min | change_type=structural
+    hypothesis: Extending the anti-aliased backbone depth to a CIFAR-adapted ResNet-26 ([3, 3, 3, 3] basic blocks, 1.5x width, 768-dim features) combined with a wider projection head (hidden dimension 4096) and fine-grained low-resolution blur probability (reducing Gaussian blur probability from 0.5 to 0.15 to avoid destroying 32x32 feature details) will increase feature representation capacity and positive-pair alignment for Decoupled Contrastive Learning (DCL).
+    change: 1. Upgraded backbone to CIFARResNet26AntiAliased with block depths [3, 3, 3, 3] and 1.5x width (768 feature dimensions).
+2. Increased ProjectionHead hidden layer dimensions from 2048 to 4096.
+3. Adjusted get_augmentation to reduce GaussianBlur probability to 0.15 with a tighter sigma range (0.1, 1.0), preserving low-res image structure.
+    feedback: ACCEPTED: val_acc 0.6144 > best 0.6101 (+0.43 pts). Now the best.
+- iter  13 | candidate | status=ok | val_acc=0.4727 | decision=rejected | wall=39.8 min | change_type=structural
+    hypothesis: Integrating an asymmetric prediction head with stop-gradient prediction targets into Decoupled Contrastive Learning (DCL) prevents gradient symmetry and feature shortcutting during pretraining. By forcing a bottleneck predictor MLP to predict stationary target projections across views while decoupling positive alignment from the negative loss denominator, the anti-aliased backbone learns higher-level, linear-evaluable representations.
+    change: 1. Modified BarlowTwinsModel to split the 2048-d output into a 1024-d prediction vector (computed via a 2-layer bottleneck Predictor MLP: Linear(1024, 512) -> BN -> ReLU -> Linear(512, 1024)) and a 1024-d target projection vector (768 -> 2048 -> 2048 -> 1024).
+2. Refactored BarlowTwinsLoss to implement Predictor-DCL: computes asymmetric contrastive loss between prediction p1 (or p2) and detached target projections t2.detach() (and t1.detach()), masking self-target entries in logsumexp calculations.
+3. Retained anti-aliased ResNet-26 backbone (1.5x width, 768-dim features) and detail-preserving CIFAR-100 augmentations.
+    feedback: REJECTED: val_acc 0.4727 <= best 0.6144 (-14.17 pts). Best code kept.
 
 <current_best_algorithm>
 ```python
 """
 Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL)
-with Anti-Aliased CIFAR-ResNet-22 Backbone.
+with Anti-Aliased CIFAR-ResNet-26 Backbone and Expanded Projection Head.
 
-Integrates BlurPool anti-aliased downsampling into a deeper 1.5x wider ResNet-22
-backbone ([2, 3, 3, 2] basic blocks, 768-dim features). Anti-aliasing enforces
-translation equivariance under spatial crop augmentations on 32x32 CIFAR-100 images,
-enhancing positive-pair feature alignment in DCL pretraining.
+Integrates BlurPool anti-aliased downsampling into a 1.5x wider ResNet-26
+backbone ([3, 3, 3, 3] basic blocks, 768-dim features) paired with a 4096-wide
+projection head and detail-preserving augmentations for CIFAR-100.
 """
 import math
 import torch
@@ -143,7 +154,7 @@ import torchvision.transforms as transforms
 class BarlowTwinsLoss(nn.Module):
     """
     Decoupled Contrastive Loss (DCL) implemented inside the BarlowTwinsLoss wrapper.
-    
+
     DCL removes positive similarity from the loss denominator, preventing high positive
     alignment from dampening its own gradient during optimization.
     """
@@ -251,9 +262,9 @@ class AntiAliasedBasicBlock(nn.Module):
         return out
 
 
-class CIFARResNet22AntiAliased(nn.Module):
+class CIFARResNet26AntiAliased(nn.Module):
     """
-    CIFAR-adapted ResNet-22 ([2, 3, 3, 2] blocks) with 1.5x width multiplier
+    CIFAR-adapted ResNet-26 ([3, 3, 3, 3] blocks) with 1.5x width multiplier
     (channels [96, 192, 384, 768]) and anti-aliased downsampling.
     """
 
@@ -266,11 +277,11 @@ class CIFARResNet22AntiAliased(nn.Module):
         self.conv1 = nn.Conv2d(3, base_channels[0], kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(base_channels[0])
 
-        # Layer depths: [2, 3, 3, 2] = ResNet-22
-        self.layer1 = self._make_layer(AntiAliasedBasicBlock, base_channels[0], 2, stride=1)
+        # Layer depths: [3, 3, 3, 3] = ResNet-26
+        self.layer1 = self._make_layer(AntiAliasedBasicBlock, base_channels[0], 3, stride=1)
         self.layer2 = self._make_layer(AntiAliasedBasicBlock, base_channels[1], 3, stride=2)
         self.layer3 = self._make_layer(AntiAliasedBasicBlock, base_channels[2], 3, stride=2)
-        self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 2, stride=2)
+        self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 3, stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -293,9 +304,9 @@ class CIFARResNet22AntiAliased(nn.Module):
 
 
 class ProjectionHead(nn.Module):
-    """3-layer projection head."""
+    """Wider 3-layer projection head (768 -> 4096 -> 4096 -> 2048)."""
 
-    def __init__(self, input_dim=768, hidden_dim=2048, output_dim=2048):
+    def __init__(self, input_dim=768, hidden_dim=4096, output_dim=2048):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -312,11 +323,11 @@ class ProjectionHead(nn.Module):
 
 
 class BarlowTwinsModel(nn.Module):
-    """CIFAR ResNet-22 Anti-Aliased backbone + 3-layer projection head."""
+    """CIFAR ResNet-26 Anti-Aliased backbone + 4096-wide 3-layer projection head."""
 
-    def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):
+    def __init__(self, proj_hidden_dim=4096, proj_output_dim=2048):
         super().__init__()
-        self.backbone = CIFARResNet22AntiAliased(width_mult=1.5)
+        self.backbone = CIFARResNet26AntiAliased(width_mult=1.5)
         self.backbone_dim = 768
         self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
 
@@ -327,8 +338,8 @@ class BarlowTwinsModel(nn.Module):
 
 
 def get_model():
-    """Return model instance with anti-aliased wider ResNet backbone."""
-    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
+    """Return model instance with anti-aliased ResNet-26 backbone."""
+    return BarlowTwinsModel(proj_hidden_dim=4096, proj_output_dim=2048)
 
 
 def get_training_config():
@@ -346,7 +357,7 @@ def get_training_config():
 
 
 def get_augmentation():
-    """Return CIFAR-100 augmentation pipeline for DCL contrastive pretraining."""
+    """Return CIFAR-100 detail-preserving augmentation pipeline."""
     mean = (0.5071, 0.4867, 0.4408)
     std = (0.2675, 0.2565, 0.2761)
 
@@ -355,7 +366,7 @@ def get_augmentation():
         transforms.RandomHorizontalFlip(),
         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
         transforms.RandomGrayscale(p=0.2),
-        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.5),
+        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 1.0))], p=0.15),
         transforms.ToTensor(),
         transforms.Normalize(mean, std),
     ])

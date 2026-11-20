@@ -1,13 +1,13 @@
 """
 Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL)
-with Dimension-Calibrated 256-D Projection Head & Wider ResNet-18 Backbone.
+with Anti-Aliased CIFAR-ResNet-22 Backbone.
 
-At high projection dimensions (d=2048), hyperspherical concentration compresses
-negative pair cosine similarities into a narrow band, weakening hard negative
-mining in contrastive loss. Projecting to d=256 restores cosine similarity variance,
-allowing temperature scaling (tau=0.07) to effectively isolate hard negatives while
-DCL maintains unsuppressed positive pair alignment.
+Integrates BlurPool anti-aliased downsampling into a deeper 1.5x wider ResNet-22
+backbone ([2, 3, 3, 2] basic blocks, 768-dim features). Anti-aliasing enforces
+translation equivariance under spatial crop augmentations on 32x32 CIFAR-100 images,
+enhancing positive-pair feature alignment in DCL pretraining.
 """
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,29 +16,24 @@ import torchvision.transforms as transforms
 
 class BarlowTwinsLoss(nn.Module):
     """
-    Decoupled Contrastive Loss (DCL) operating on calibrated 256-dimensional projections.
+    Decoupled Contrastive Loss (DCL) implemented inside the BarlowTwinsLoss wrapper.
     
-    DCL removes positive similarity from the loss denominator to prevent positive alignment
-    dampening. Operating on 256-D vectors restores variance in negative pair similarities,
-    making temperature scaling (tau=0.07) highly effective for hard-negative weighting.
+    DCL removes positive similarity from the loss denominator, preventing high positive
+    alignment from dampening its own gradient during optimization.
     """
 
-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.07, proj_dim=256):
+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10):
         super().__init__()
         self.temperature = temperature
-        self.proj_dim = proj_dim
 
     def forward(self, z1, z2):
-        # Extract active projection dimensions
-        z1 = z1[:, :self.proj_dim]
-        z2 = z2[:, :self.proj_dim]
         batch_size = z1.shape[0]
 
         # L2-normalize projection vectors
         z1_norm = F.normalize(z1, dim=1)
         z2_norm = F.normalize(z2, dim=1)
 
-        # Concatenate projections: shape [2 * batch_size, proj_dim]
+        # Concatenate projections: shape [2 * batch_size, embedding_dim]
         z = torch.cat([z1_norm, z2_norm], dim=0)
 
         # Cosine similarity matrix scaled by temperature
@@ -68,34 +63,73 @@ class BarlowTwinsLoss(nn.Module):
         return loss
 
 
-class BasicBlock(nn.Module):
-    """Standard ResNet BasicBlock with customizable channel width."""
+class BlurPool2d(nn.Module):
+    """
+    Anti-aliased downsampling (BlurPool) module using a 3x3 binomial filter
+    [1, 2, 1] x [1, 2, 1]^T / 16 (Zhang 2019).
+    """
+
+    def __init__(self, channels, stride=2):
+        super().__init__()
+        self.stride = stride
+        kernel = torch.tensor([
+            [1.0, 2.0, 1.0],
+            [2.0, 4.0, 2.0],
+            [1.0, 2.0, 1.0]
+        ])
+        kernel = kernel / kernel.sum()
+        self.register_buffer('kernel', kernel.view(1, 1, 3, 3).repeat(channels, 1, 1, 1))
+
+    def forward(self, x):
+        return F.conv2d(x, self.kernel, stride=self.stride, padding=1, groups=x.shape[1])
+
+
+class AntiAliasedBasicBlock(nn.Module):
+    """ResNet BasicBlock with BlurPool anti-aliased downsampling."""
     expansion = 1
 
     def __init__(self, in_planes, planes, stride=1):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        if stride == 2:
+            self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+            self.blur1 = BlurPool2d(planes, stride=2)
+        else:
+            self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+            self.blur1 = nn.Identity()
+
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion * planes:
-            self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(self.expansion * planes)
-            )
+            if stride == 2:
+                self.shortcut = nn.Sequential(
+                    nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=1, bias=False),
+                    BlurPool2d(self.expansion * planes, stride=2),
+                    nn.BatchNorm2d(self.expansion * planes)
+                )
+            else:
+                self.shortcut = nn.Sequential(
+                    nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=1, bias=False),
+                    nn.BatchNorm2d(self.expansion * planes)
+                )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.conv1(x)
+        out = self.blur1(out)
+        out = F.relu(self.bn1(out))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
         out = F.relu(out)
         return out
 
 
-class CIFARResNet18Wider(nn.Module):
-    """CIFAR-adapted ResNet-18 with 1.5x width multiplier (channels [96, 192, 384, 768])."""
+class CIFARResNet22AntiAliased(nn.Module):
+    """
+    CIFAR-adapted ResNet-22 ([2, 3, 3, 2] blocks) with 1.5x width multiplier
+    (channels [96, 192, 384, 768]) and anti-aliased downsampling.
+    """
 
     def __init__(self, width_mult=1.5):
         super().__init__()
@@ -106,10 +140,11 @@ class CIFARResNet18Wider(nn.Module):
         self.conv1 = nn.Conv2d(3, base_channels[0], kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(base_channels[0])
 
-        self.layer1 = self._make_layer(BasicBlock, base_channels[0], 2, stride=1)
-        self.layer2 = self._make_layer(BasicBlock, base_channels[1], 2, stride=2)
-        self.layer3 = self._make_layer(BasicBlock, base_channels[2], 2, stride=2)
-        self.layer4 = self._make_layer(BasicBlock, base_channels[3], 2, stride=2)
+        # Layer depths: [2, 3, 3, 2] = ResNet-22
+        self.layer1 = self._make_layer(AntiAliasedBasicBlock, base_channels[0], 2, stride=1)
+        self.layer2 = self._make_layer(AntiAliasedBasicBlock, base_channels[1], 3, stride=2)
+        self.layer3 = self._make_layer(AntiAliasedBasicBlock, base_channels[2], 3, stride=2)
+        self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 2, stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -132,15 +167,10 @@ class CIFARResNet18Wider(nn.Module):
 
 
 class ProjectionHead(nn.Module):
-    """
-    3-layer MLP projection head that projects backbone features to 256 dimensions
-    and pads output to 2048 dimensions for harness interface compatibility.
-    """
+    """3-layer projection head."""
 
-    def __init__(self, input_dim=768, hidden_dim=2048, proj_dim=256, output_dim=2048):
+    def __init__(self, input_dim=768, hidden_dim=2048, output_dim=2048):
         super().__init__()
-        self.proj_dim = proj_dim
-        self.output_dim = output_dim
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
@@ -148,28 +178,21 @@ class ProjectionHead(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden_dim, proj_dim),
+            nn.Linear(hidden_dim, output_dim),
         )
 
     def forward(self, x):
-        z = self.net(x)
-        # Pad with zeros to 2048-dim for official script contract compatibility
-        return F.pad(z, (0, self.output_dim - self.proj_dim))
+        return self.net(x)
 
 
 class BarlowTwinsModel(nn.Module):
-    """Wider ResNet-18 backbone + 256-D projection head."""
+    """CIFAR ResNet-22 Anti-Aliased backbone + 3-layer projection head."""
 
-    def __init__(self, proj_dim=256, proj_hidden_dim=2048, proj_output_dim=2048):
+    def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):
         super().__init__()
-        self.backbone = CIFARResNet18Wider(width_mult=1.5)
+        self.backbone = CIFARResNet22AntiAliased(width_mult=1.5)
         self.backbone_dim = 768
-        self.projector = ProjectionHead(
-            input_dim=self.backbone_dim,
-            hidden_dim=proj_hidden_dim,
-            proj_dim=proj_dim,
-            output_dim=proj_output_dim
-        )
+        self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
 
     def forward(self, x):
         features = self.backbone(x)
@@ -178,12 +201,12 @@ class BarlowTwinsModel(nn.Module):
 
 
 def get_model():
-    """Return model instance with wider backbone and 256-D projection head."""
-    return BarlowTwinsModel(proj_dim=256, proj_hidden_dim=2048, proj_output_dim=2048)
+    """Return model instance with anti-aliased wider ResNet backbone."""
+    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
 
 
 def get_training_config():
-    """Return pretraining and evaluation hyperparameters."""
+    """Return training hyperparameters."""
     return {
         'pretrain_epochs': 130,
         'linear_eval_epochs': 100,
@@ -197,7 +220,7 @@ def get_training_config():
 
 
 def get_augmentation():
-    """Return standard CIFAR-100 data augmentation pipeline."""
+    """Return CIFAR-100 augmentation pipeline for DCL contrastive pretraining."""
     mean = (0.5071, 0.4867, 0.4408)
     std = (0.2675, 0.2565, 0.2761)
 

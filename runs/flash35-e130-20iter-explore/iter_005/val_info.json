@@ -1,13 +1,13 @@
 {
   "cifar100_ssl": {
     "means": {
-      "linear_eval_acc_mean": 0.6633565425872803
+      "linear_eval_acc_mean": 0.4097980856895447
     },
     "stderrs": {
       "linear_eval_acc_stderr": 0.0
     },
     "final_info_dict": {
-      "linear_eval_acc": 0.6633565425872803
+      "linear_eval_acc": 0.4097980856895447
     }
   }
 }

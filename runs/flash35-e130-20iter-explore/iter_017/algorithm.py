@@ -1,11 +1,10 @@
 """
-Self-supervised learning algorithm: Joint Decoupled Contrastive Learning (DCL)
-and Tri-Matrix Barlow Twins Feature Decorrelation Loss on Anti-Aliased ResNet-26.
+Self-supervised learning algorithm: Multi-Scale Anti-Aliased ResNet-26 Backbone
+with Joint Decoupled Contrastive Learning (DCL) and Barlow Twins Feature Decorrelation.
 
-Combines sample-level instance discrimination (DCL) with comprehensive channel-level
-feature decorrelation (penalizing off-diagonals of inter-view C12 and intra-view C11, C22 matrices)
-on an anti-aliased 1.5x ResNet-26 backbone ([3, 3, 3, 3] blocks, 768-dim features) and
-4096-wide projection head.
+Combines Stage 3 (8x8, 384-dim) and Stage 4 (4x4, 768-dim) pooled features to form
+a 1152-dim multi-scale representation, trained via joint sample contrast (DCL) and
+feature decorrelation (Barlow Twins).
 """
 import math
 import torch
@@ -17,21 +16,19 @@ import torchvision.transforms as transforms
 class BarlowTwinsLoss(nn.Module):
     """
     Joint Sample-Dimensional Objective: Decoupled Contrastive Loss (DCL)
-    plus Tri-Matrix Barlow Twins Feature Decorrelation Regularization.
+    plus Barlow Twins Feature Decorrelation Regularization.
 
     - DCL ensures sample-level repulsion without positive dampening.
-    - Tri-Matrix Barlow Twins decorrelation forces projection dimensions to be orthogonal
-      both across views (C12) and within each view (C11, C22), eliminating intra-view
-      and inter-view channel redundancies to maximize representation rank.
+    - Barlow Twins decorrelation forces projection dimensions to be orthogonal,
+      maximizing channel-wise feature entropy and representation rank.
     """
 
-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, bt_weight=0.5, intra_weight=0.5):
+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, bt_weight=0.5):
         super().__init__()
         self.temperature = temperature
         self.lambda_param = lambda_param
         self.embedding_dim = embedding_dim
         self.bt_weight = bt_weight
-        self.intra_weight = intra_weight
 
     def forward(self, z1, z2):
         batch_size = z1.shape[0]
@@ -62,27 +59,18 @@ class BarlowTwinsLoss(nn.Module):
         dcl_loss = (-pos_sim + neg_logsumexp).mean()
 
         # -------------------------------------------------------------
-        # 2. Tri-Matrix Barlow Twins Decorrelation (Channel independence)
+        # 2. Barlow Twins Feature Decorrelation (Channel-level independence)
         # -------------------------------------------------------------
         z1_bn = (z1 - z1.mean(dim=0)) / (z1.std(dim=0) + 1e-5)
         z2_bn = (z2 - z2.mean(dim=0)) / (z2.std(dim=0) + 1e-5)
 
-        # Inter-view cross-correlation matrix
-        c12 = torch.matmul(z1_bn.T, z2_bn) / batch_size
-        # Intra-view auto-correlation matrices
-        c11 = torch.matmul(z1_bn.T, z1_bn) / batch_size
-        c22 = torch.matmul(z2_bn.T, z2_bn) / batch_size
+        c = torch.matmul(z1_bn.T, z2_bn) / batch_size
 
-        on_diag = (torch.diagonal(c12) - 1.0).pow(2).sum()
+        on_diag = (torch.diagonal(c) - 1.0).pow(2).sum()
         off_diag_mask = ~torch.eye(self.embedding_dim, dtype=torch.bool, device=z.device)
+        off_diag = (c[off_diag_mask]).pow(2).sum()
 
-        off_diag_12 = (c12[off_diag_mask]).pow(2).sum()
-        off_diag_11 = (c11[off_diag_mask]).pow(2).sum()
-        off_diag_22 = (c22[off_diag_mask]).pow(2).sum()
-
-        off_diag_total = off_diag_12 + self.intra_weight * (off_diag_11 + off_diag_22)
-
-        bt_loss = (on_diag + self.lambda_param * off_diag_total) / self.embedding_dim
+        bt_loss = (on_diag + self.lambda_param * off_diag) / self.embedding_dim
 
         # -------------------------------------------------------------
         # Joint Objective
@@ -153,10 +141,13 @@ class AntiAliasedBasicBlock(nn.Module):
         return out
 
 
-class CIFARResNet26AntiAliased(nn.Module):
+class MultiScaleCIFARResNet26(nn.Module):
     """
     CIFAR-adapted ResNet-26 ([3, 3, 3, 3] blocks) with 1.5x width multiplier
-    (channels [96, 192, 384, 768]) and anti-aliased downsampling.
+    (channels [96, 192, 384, 768]) and Multi-Scale Feature Aggregation.
+
+    Concatenates pooled Stage 3 (384-dim, 8x8) and Stage 4 (768-dim, 4x4)
+    features into a 1152-dim representation standardized via BatchNorm1d.
     """
 
     def __init__(self, width_mult=1.5):
@@ -173,7 +164,12 @@ class CIFARResNet26AntiAliased(nn.Module):
         self.layer2 = self._make_layer(AntiAliasedBasicBlock, base_channels[1], 3, stride=2)
         self.layer3 = self._make_layer(AntiAliasedBasicBlock, base_channels[2], 3, stride=2)
         self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 3, stride=2)
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+        # Output feature dimension: 384 (stage 3) + 768 (stage 4) = 1152
+        out_dim = base_channels[2] + base_channels[3]
+        self.bn_out = nn.BatchNorm1d(out_dim)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -187,17 +183,20 @@ class CIFARResNet26AntiAliased(nn.Module):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)
-        out = self.avgpool(out)
-        out = torch.flatten(out, 1)
-        return out
+        stage3_out = self.layer3(out)
+        stage4_out = self.layer4(stage3_out)
+
+        f3 = torch.flatten(self.avgpool(stage3_out), 1)
+        f4 = torch.flatten(self.avgpool(stage4_out), 1)
+
+        f_multi = torch.cat([f3, f4], dim=1)
+        return self.bn_out(f_multi)
 
 
 class ProjectionHead(nn.Module):
-    """Wider 3-layer projection head (768 -> 4096 -> 4096 -> 2048)."""
+    """Wider 3-layer projection head (1152 -> 4096 -> 4096 -> 2048)."""
 
-    def __init__(self, input_dim=768, hidden_dim=4096, output_dim=2048):
+    def __init__(self, input_dim=1152, hidden_dim=4096, output_dim=2048):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -214,12 +213,12 @@ class ProjectionHead(nn.Module):
 
 
 class BarlowTwinsModel(nn.Module):
-    """CIFAR ResNet-26 Anti-Aliased backbone + 4096-wide 3-layer projection head."""
+    """Multi-Scale ResNet-26 Anti-Aliased backbone (1152-dim) + 4096-wide projection head."""
 
     def __init__(self, proj_hidden_dim=4096, proj_output_dim=2048):
         super().__init__()
-        self.backbone = CIFARResNet26AntiAliased(width_mult=1.5)
-        self.backbone_dim = 768
+        self.backbone = MultiScaleCIFARResNet26(width_mult=1.5)
+        self.backbone_dim = 1152
         self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
 
     def forward(self, x):
@@ -229,7 +228,7 @@ class BarlowTwinsModel(nn.Module):
 
 
 def get_model():
-    """Return model instance with anti-aliased ResNet-26 backbone."""
+    """Return model instance with multi-scale anti-aliased ResNet-26 backbone."""
     return BarlowTwinsModel(proj_hidden_dim=4096, proj_output_dim=2048)
 
 

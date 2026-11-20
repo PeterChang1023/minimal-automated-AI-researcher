@@ -58,13 +58,13 @@ Categories A and B are STRUCTURAL changes; C-E are TUNING.
 ## Scores and compute under this budget
 - baseline val acc: 0.4677
 - current best val acc: 0.6144 (iter 12)
-- per-experiment time limit: 120.0 min. Measured wall-clock of completed runs: last 39.8 min, max 40.2 min (pretrain + linear eval) -> about 80 min of headroom (34% of the limit used). Heavier methods (bigger backbone, momentum encoder, extra heads) are affordable if they stay inside the limit; a timeout counts as a failed experiment.
+- per-experiment time limit: 120.0 min. Measured wall-clock of completed runs: last 45.5 min, max 48.2 min (pretrain + linear eval) -> about 72 min of headroom (40% of the limit used). Heavier methods (bigger backbone, momentum encoder, extra heads) are affordable if they stay inside the limit; a timeout counts as a failed experiment.
 - acceptance rule (program-checked): a candidate replaces the best only if it runs successfully and its val acc is STRICTLY higher than the current best.
 
 ## Plateau rule (detected by the program)
 If the last 3 experiments all landed within +/-1.2 pts of the best, the next experiment MUST be a structural change (category A or B).
 Status: no plateau right now; you are free to choose.
-So far 11 of 11 experiments were structural.
+So far 13 of 13 experiments were structural.
 
 ## History of experiments (oldest first)
 - iter   0 | baseline | status=ok | val_acc=0.4677 | decision=baseline | wall=17.9 min
@@ -133,6 +133,16 @@ So far 11 of 11 experiments were structural.
 2. Refactored BarlowTwinsLoss to implement Predictor-DCL: computes asymmetric contrastive loss between prediction p1 (or p2) and detached target projections t2.detach() (and t1.detach()), masking self-target entries in logsumexp calculations.
 3. Retained anti-aliased ResNet-26 backbone (1.5x width, 768-dim features) and detail-preserving CIFAR-100 augmentations.
     feedback: REJECTED: val_acc 0.4727 <= best 0.6144 (-14.17 pts). Best code kept.
+- iter  14 | candidate | status=ok | val_acc=0.6134 | decision=rejected | wall=48.2 min | change_type=structural
+    hypothesis: Scaling the anti-aliased backbone depth from ResNet-26 ([3, 3, 3, 3] blocks) to a CIFAR-adapted ResNet-34 ([3, 4, 6, 3] basic blocks, 1.5x width, 768-dim features) will enhance semantic representation capacity and feature hierarchy—especially at the critical 8x8 spatial resolution in stage 3 (6 blocks)—improving linear evaluation top-1 accuracy under Decoupled Contrastive Loss (DCL).
+    change: Upgraded backbone architecture from CIFARResNet26AntiAliased ([3, 3, 3, 3]) to CIFARResNet34AntiAliased ([3, 4, 6, 3] basic blocks, 1.5x width, 768-dim output). Retained BlurPool anti-aliasing, 4096-wide projection head, DCL loss (tau=0.10), and detail-preserving augmentations.
+    feedback: REJECTED: val_acc 0.6134 <= best 0.6144 (-0.10 pts). Best code kept.
+- iter  15 | candidate | status=ok | val_acc=0.5799 | decision=rejected | wall=45.5 min | change_type=structural
+    hypothesis: Positioning BlurPool anti-aliasing filtering immediately after ReLU non-linearities suppresses high-frequency non-linear aliasing harmonics, while integrating non-reduction Efficient Channel Attention (ECA) and enforcing a semantic minimum crop scale of 0.15 will enhance feature representation quality under Decoupled Contrastive Learning (DCL).
+    change: 1. Upgraded AntiAliasedBasicBlock to perform BlurPool anti-aliased filtering post-ReLU (after non-linear activation) and integrated an ECALayer (Efficient Channel Attention) into every block.
+2. Refined get_augmentation() to use scale=(0.15, 1.0) for RandomResizedCrop and removed Gaussian blur to prevent semantic degradation on low-resolution 32x32 images.
+3. Retained Decoupled Contrastive Loss (DCL, tau=0.10), 1.5x wider ResNet-26 backbone (768-dim features), 4096-wide projection head, and standard pretraining schedule.
+    feedback: REJECTED: val_acc 0.5799 <= best 0.6144 (-3.44 pts). Best code kept.
 
 <current_best_algorithm>
 ```python

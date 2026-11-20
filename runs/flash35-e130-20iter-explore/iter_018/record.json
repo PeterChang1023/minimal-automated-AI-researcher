@@ -1,8 +1,8 @@
 {
-  "iter": 22,
+  "iter": 18,
   "kind": "candidate",
   "time": "2026-11-19T18:52:45+08:00",
-  "parent_iter": 20,
+  "parent_iter": 17,
   "parent_val_acc": 0.6620324850082397,
   "llm": {
     "backend": "gemini",

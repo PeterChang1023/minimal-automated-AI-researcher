@@ -1,140 +1,82 @@
---- iter_012/algorithm.py (best)
-+++ iter_015/algorithm.py
+--- iter_016/algorithm.py (best)
++++ iter_017/algorithm.py
 @@ -1,10 +1,11 @@
  """
- Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL)
--with Anti-Aliased CIFAR-ResNet-26 Backbone and Expanded Projection Head.
+ Self-supervised learning algorithm: Joint Decoupled Contrastive Learning (DCL)
+-and Barlow Twins Feature Decorrelation Loss with Anti-Aliased ResNet-26 Backbone.
 -
--Integrates BlurPool anti-aliased downsampling into a 1.5x wider ResNet-26
--backbone ([3, 3, 3, 3] basic blocks, 768-dim features) paired with a 4096-wide
--projection head and detail-preserving augmentations for CIFAR-100.
-+with Post-ReLU Anti-Aliased ECA-ResNet-26 Backbone.
+-Combines sample-level instance discrimination (DCL) with channel-level feature
+-decorrelation (Barlow Twins cross-correlation penalty) on an anti-aliased 1.5x
+-ResNet-26 backbone ([3, 3, 3, 3] blocks, 768-dim features) and 4096-wide projection head.
++and Tri-Matrix Barlow Twins Feature Decorrelation Loss on Anti-Aliased ResNet-26.
 +
-+Integrates Post-ReLU BlurPool anti-aliased downsampling and Efficient Channel
-+Attention (ECA) into a 1.5x wider ResNet-26 backbone ([3, 3, 3, 3] blocks,
-+768-dim features) paired with a 4096-wide projection head and semantic-preserving
-+CIFAR-100 augmentations.
++Combines sample-level instance discrimination (DCL) with comprehensive channel-level
++feature decorrelation (penalizing off-diagonals of inter-view C12 and intra-view C11, C22 matrices)
++on an anti-aliased 1.5x ResNet-26 backbone ([3, 3, 3, 3] blocks, 768-dim features) and
++4096-wide projection head.
  """
  import math
  import torch
-@@ -83,30 +84,54 @@
-         return F.conv2d(x, self.kernel, stride=self.stride, padding=1, groups=x.shape[1])
- 
- 
-+class ECALayer(nn.Module):
-+    """
-+    Efficient Channel Attention (ECA) module (Wang et al., CVPR 2020).
-+    Captures cross-channel interactions using 1D convolution without channel dimensionality reduction.
-+    """
-+
-+    def __init__(self, channels, k_size=3):
-+        super().__init__()
-+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-+        self.conv = nn.Conv1d(1, 1, kernel_size=k_size, padding=(k_size - 1) // 2, bias=False)
-+        self.sigmoid = nn.Sigmoid()
-+
-+    def forward(self, x):
-+        y = self.avg_pool(x)  # [B, C, 1, 1]
-+        y = y.squeeze(-1).transpose(-1, -2)  # [B, 1, C]
-+        y = self.conv(y)  # [B, 1, C]
-+        y = y.transpose(-1, -2).unsqueeze(-1)  # [B, C, 1, 1]
-+        y = self.sigmoid(y)
-+        return x * y.expand_as(x)
-+
-+
- class AntiAliasedBasicBlock(nn.Module):
--    """ResNet BasicBlock with BlurPool anti-aliased downsampling."""
-+    """
-+    ResNet BasicBlock with Post-ReLU BlurPool anti-aliased downsampling
-+    and Efficient Channel Attention (ECA).
-+    """
-     expansion = 1
- 
-     def __init__(self, in_planes, planes, stride=1):
-         super().__init__()
-+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-+        self.bn1 = nn.BatchNorm2d(planes)
-         if stride == 2:
--            self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-             self.blur1 = BlurPool2d(planes, stride=2)
-         else:
--            self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-             self.blur1 = nn.Identity()
- 
--        self.bn1 = nn.BatchNorm2d(planes)
-         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-         self.bn2 = nn.BatchNorm2d(planes)
-+        self.eca = ECALayer(planes, k_size=3)
- 
-         self.shortcut = nn.Sequential()
-         if stride != 1 or in_planes != self.expansion * planes:
-             if stride == 2:
-                 self.shortcut = nn.Sequential(
-                     nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=1, bias=False),
--                    BlurPool2d(self.expansion * planes, stride=2),
--                    nn.BatchNorm2d(self.expansion * planes)
-+                    nn.BatchNorm2d(self.expansion * planes),
-+                    BlurPool2d(self.expansion * planes, stride=2)
-                 )
-             else:
-                 self.shortcut = nn.Sequential(
-@@ -115,10 +140,10 @@
-                 )
- 
-     def forward(self, x):
--        out = self.conv1(x)
--        out = self.blur1(out)
--        out = F.relu(self.bn1(out))
-+        out = F.relu(self.bn1(self.conv1(x)))
-+        out = self.blur1(out)  # Anti-aliased filtering applied AFTER ReLU non-linearity
-         out = self.bn2(self.conv2(out))
-+        out = self.eca(out)
-         out += self.shortcut(x)
-         out = F.relu(out)
-         return out
-@@ -127,7 +152,7 @@
- class CIFARResNet26AntiAliased(nn.Module):
+@@ -16,19 +17,21 @@
+ class BarlowTwinsLoss(nn.Module):
      """
-     CIFAR-adapted ResNet-26 ([3, 3, 3, 3] blocks) with 1.5x width multiplier
--    (channels [96, 192, 384, 768]) and anti-aliased downsampling.
-+    (channels [96, 192, 384, 768]), ECA channel attention, and anti-aliased downsampling.
-     """
+     Joint Sample-Dimensional Objective: Decoupled Contrastive Loss (DCL)
+-    plus Barlow Twins Feature Decorrelation Regularization.
++    plus Tri-Matrix Barlow Twins Feature Decorrelation Regularization.
  
-     def __init__(self, width_mult=1.5):
-@@ -185,7 +210,7 @@
- 
- 
- class BarlowTwinsModel(nn.Module):
--    """CIFAR ResNet-26 Anti-Aliased backbone + 4096-wide 3-layer projection head."""
-+    """CIFAR ECA-ResNet-26 Anti-Aliased backbone + 4096-wide 3-layer projection head."""
- 
-     def __init__(self, proj_hidden_dim=4096, proj_output_dim=2048):
+     - DCL ensures sample-level repulsion without positive dampening.
+-    - Barlow Twins decorrelation forces projection dimensions to be orthogonal,
+-      maximizing channel-wise feature entropy and representation rank.
+-    """
+-
+-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, bt_weight=0.5):
++    - Tri-Matrix Barlow Twins decorrelation forces projection dimensions to be orthogonal
++      both across views (C12) and within each view (C11, C22), eliminating intra-view
++      and inter-view channel redundancies to maximize representation rank.
++    """
++
++    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, bt_weight=0.5, intra_weight=0.5):
          super().__init__()
-@@ -200,7 +225,7 @@
+         self.temperature = temperature
+         self.lambda_param = lambda_param
+         self.embedding_dim = embedding_dim
+         self.bt_weight = bt_weight
++        self.intra_weight = intra_weight
  
+     def forward(self, z1, z2):
+         batch_size = z1.shape[0]
+@@ -59,18 +62,27 @@
+         dcl_loss = (-pos_sim + neg_logsumexp).mean()
  
- def get_model():
--    """Return model instance with anti-aliased ResNet-26 backbone."""
-+    """Return model instance with post-ReLU anti-aliased ECA-ResNet-26 backbone."""
-     return BarlowTwinsModel(proj_hidden_dim=4096, proj_output_dim=2048)
+         # -------------------------------------------------------------
+-        # 2. Barlow Twins Feature Decorrelation (Channel-level independence)
++        # 2. Tri-Matrix Barlow Twins Decorrelation (Channel independence)
+         # -------------------------------------------------------------
+         z1_bn = (z1 - z1.mean(dim=0)) / (z1.std(dim=0) + 1e-5)
+         z2_bn = (z2 - z2.mean(dim=0)) / (z2.std(dim=0) + 1e-5)
  
+-        c = torch.matmul(z1_bn.T, z2_bn) / batch_size
+-
+-        on_diag = (torch.diagonal(c) - 1.0).pow(2).sum()
++        # Inter-view cross-correlation matrix
++        c12 = torch.matmul(z1_bn.T, z2_bn) / batch_size
++        # Intra-view auto-correlation matrices
++        c11 = torch.matmul(z1_bn.T, z1_bn) / batch_size
++        c22 = torch.matmul(z2_bn.T, z2_bn) / batch_size
++
++        on_diag = (torch.diagonal(c12) - 1.0).pow(2).sum()
+         off_diag_mask = ~torch.eye(self.embedding_dim, dtype=torch.bool, device=z.device)
+-        off_diag = (c[off_diag_mask]).pow(2).sum()
+-
+-        bt_loss = (on_diag + self.lambda_param * off_diag) / self.embedding_dim
++
++        off_diag_12 = (c12[off_diag_mask]).pow(2).sum()
++        off_diag_11 = (c11[off_diag_mask]).pow(2).sum()
++        off_diag_22 = (c22[off_diag_mask]).pow(2).sum()
++
++        off_diag_total = off_diag_12 + self.intra_weight * (off_diag_11 + off_diag_22)
++
++        bt_loss = (on_diag + self.lambda_param * off_diag_total) / self.embedding_dim
  
-@@ -219,16 +244,15 @@
- 
- 
- def get_augmentation():
--    """Return CIFAR-100 detail-preserving augmentation pipeline."""
-+    """Return CIFAR-100 semantic-preserving augmentation pipeline."""
-     mean = (0.5071, 0.4867, 0.4408)
-     std = (0.2675, 0.2565, 0.2761)
- 
-     return transforms.Compose([
--        transforms.RandomResizedCrop(32, scale=(0.08, 1.0)),
-+        transforms.RandomResizedCrop(32, scale=(0.15, 1.0)),
-         transforms.RandomHorizontalFlip(),
-         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
-         transforms.RandomGrayscale(p=0.2),
--        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 1.0))], p=0.15),
-         transforms.ToTensor(),
-         transforms.Normalize(mean, std),
-     ])
+         # -------------------------------------------------------------
+         # Joint Objective

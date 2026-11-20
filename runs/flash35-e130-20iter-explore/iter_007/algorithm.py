@@ -1,10 +1,12 @@
 """
-Self-supervised learning algorithm: Decoupled Contrastive Loss with Hard-Negative Reweighting (DCLW)
-and Wider CIFAR-ResNet-18 Backbone.
+Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL)
+with Dimension-Calibrated 256-D Projection Head & Wider ResNet-18 Backbone.
 
-DCLW (Yeh et al., CVPR 2022) extends DCL by assigning higher gradient weights
-to hard negative pairs (negatives with higher cosine similarity). This sharpens
-class boundaries for fine-grained classification tasks like CIFAR-100.
+At high projection dimensions (d=2048), hyperspherical concentration compresses
+negative pair cosine similarities into a narrow band, weakening hard negative
+mining in contrastive loss. Projecting to d=256 restores cosine similarity variance,
+allowing temperature scaling (tau=0.07) to effectively isolate hard negatives while
+DCL maintains unsuppressed positive pair alignment.
 """
 import torch
 import torch.nn as nn
@@ -14,30 +16,33 @@ import torchvision.transforms as transforms
 
 class BarlowTwinsLoss(nn.Module):
     """
-    Decoupled Contrastive Loss with Hard-Negative Reweighting (DCLW).
+    Decoupled Contrastive Loss (DCL) operating on calibrated 256-dimensional projections.
     
-    DCLW eliminates positive gradient suppression (like DCL) and additionally
-    reweights negative pairs by their hardness using dual temperature parameters:
-    temperature (tau=0.10) for alignment and tau_w (0.20) for negative weighting.
+    DCL removes positive similarity from the loss denominator to prevent positive alignment
+    dampening. Operating on 256-D vectors restores variance in negative pair similarities,
+    making temperature scaling (tau=0.07) highly effective for hard-negative weighting.
     """
 
-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, tau_w=0.20):
+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.07, proj_dim=256):
         super().__init__()
         self.temperature = temperature
-        self.tau_w = tau_w
+        self.proj_dim = proj_dim
 
     def forward(self, z1, z2):
+        # Extract active projection dimensions
+        z1 = z1[:, :self.proj_dim]
+        z2 = z2[:, :self.proj_dim]
         batch_size = z1.shape[0]
 
         # L2-normalize projection vectors
         z1_norm = F.normalize(z1, dim=1)
         z2_norm = F.normalize(z2, dim=1)
 
-        # Concatenate projections: shape [2 * batch_size, embedding_dim]
+        # Concatenate projections: shape [2 * batch_size, proj_dim]
         z = torch.cat([z1_norm, z2_norm], dim=0)
 
-        # Cosine similarity matrix
-        sim = torch.matmul(z, z.T)
+        # Cosine similarity matrix scaled by temperature
+        sim = torch.matmul(z, z.T) / self.temperature
 
         # Extract positive pair similarities
         pos_sim = torch.cat([
@@ -53,19 +58,12 @@ class BarlowTwinsLoss(nn.Module):
 
         mask_neg = ~(mask_self | mask_pos)
 
-        # Calculate effective temperature for hard negative weighting: 1/tau_eff = 1/tau + 1/tau_w
-        tau_eff = (self.temperature * self.tau_w) / (self.temperature + self.tau_w)
-
         # Mask non-negative entries with large negative value for logsumexp
-        sim_neg_eff = (sim / tau_eff).masked_fill(~mask_neg, -1e9)
-        sim_neg_w = (sim / self.tau_w).masked_fill(~mask_neg, -1e9)
+        sim_neg = sim.masked_fill(~mask_neg, -1e9)
 
-        # Hard-negative reweighted logsumexp difference
-        logsumexp_eff = torch.logsumexp(sim_neg_eff, dim=1)
-        logsumexp_w = torch.logsumexp(sim_neg_w, dim=1)
-
-        # DCLW loss: - pos_sim / tau + logsumexp_eff - logsumexp_w
-        loss = (-pos_sim / self.temperature + logsumexp_eff - logsumexp_w).mean()
+        # Decoupled contrastive loss: - pos_sim + logsumexp(neg_sim)
+        neg_logsumexp = torch.logsumexp(sim_neg, dim=1)
+        loss = (-pos_sim + neg_logsumexp).mean()
 
         return loss
 
@@ -134,10 +132,15 @@ class CIFARResNet18Wider(nn.Module):
 
 
 class ProjectionHead(nn.Module):
-    """3-layer projection head."""
+    """
+    3-layer MLP projection head that projects backbone features to 256 dimensions
+    and pads output to 2048 dimensions for harness interface compatibility.
+    """
 
-    def __init__(self, input_dim=768, hidden_dim=2048, output_dim=2048):
+    def __init__(self, input_dim=768, hidden_dim=2048, proj_dim=256, output_dim=2048):
         super().__init__()
+        self.proj_dim = proj_dim
+        self.output_dim = output_dim
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
@@ -145,21 +148,28 @@ class ProjectionHead(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden_dim, output_dim),
+            nn.Linear(hidden_dim, proj_dim),
         )
 
     def forward(self, x):
-        return self.net(x)
+        z = self.net(x)
+        # Pad with zeros to 2048-dim for official script contract compatibility
+        return F.pad(z, (0, self.output_dim - self.proj_dim))
 
 
 class BarlowTwinsModel(nn.Module):
-    """Wider ResNet-18 backbone + 3-layer projection head."""
+    """Wider ResNet-18 backbone + 256-D projection head."""
 
-    def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):
+    def __init__(self, proj_dim=256, proj_hidden_dim=2048, proj_output_dim=2048):
         super().__init__()
         self.backbone = CIFARResNet18Wider(width_mult=1.5)
         self.backbone_dim = 768
-        self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
+        self.projector = ProjectionHead(
+            input_dim=self.backbone_dim,
+            hidden_dim=proj_hidden_dim,
+            proj_dim=proj_dim,
+            output_dim=proj_output_dim
+        )
 
     def forward(self, x):
         features = self.backbone(x)
@@ -168,12 +178,12 @@ class BarlowTwinsModel(nn.Module):
 
 
 def get_model():
-    """Return model instance with wider backbone and projection head."""
-    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
+    """Return model instance with wider backbone and 256-D projection head."""
+    return BarlowTwinsModel(proj_dim=256, proj_hidden_dim=2048, proj_output_dim=2048)
 
 
 def get_training_config():
-    """Return training hyperparameters."""
+    """Return pretraining and evaluation hyperparameters."""
     return {
         'pretrain_epochs': 130,
         'linear_eval_epochs': 100,
@@ -187,7 +197,7 @@ def get_training_config():
 
 
 def get_augmentation():
-    """Return CIFAR-100 augmentation pipeline for DCLW contrastive pretraining."""
+    """Return standard CIFAR-100 data augmentation pipeline."""
     mean = (0.5071, 0.4867, 0.4408)
     std = (0.2675, 0.2565, 0.2761)
 
@@ -196,7 +206,7 @@ def get_augmentation():
         transforms.RandomHorizontalFlip(),
         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
         transforms.RandomGrayscale(p=0.2),
-        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 1.0))], p=0.2),
+        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.5),
         transforms.ToTensor(),
         transforms.Normalize(mean, std),
     ])

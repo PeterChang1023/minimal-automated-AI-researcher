@@ -57,14 +57,14 @@ Categories A and B are STRUCTURAL changes; C-E are TUNING.
 
 ## Scores and compute under this budget
 - baseline val acc: 0.4677
-- current best val acc: 0.6144 (iter 12)
-- per-experiment time limit: 120.0 min. Measured wall-clock of completed runs: last 48.2 min, max 48.2 min (pretrain + linear eval) -> about 72 min of headroom (40% of the limit used). Heavier methods (bigger backbone, momentum encoder, extra heads) are affordable if they stay inside the limit; a timeout counts as a failed experiment.
+- current best val acc: 0.6200 (iter 16)
+- per-experiment time limit: 120.0 min. Measured wall-clock of completed runs: last 41.5 min, max 48.2 min (pretrain + linear eval) -> about 72 min of headroom (40% of the limit used). Heavier methods (bigger backbone, momentum encoder, extra heads) are affordable if they stay inside the limit; a timeout counts as a failed experiment.
 - acceptance rule (program-checked): a candidate replaces the best only if it runs successfully and its val acc is STRICTLY higher than the current best.
 
 ## Plateau rule (detected by the program)
 If the last 3 experiments all landed within +/-1.2 pts of the best, the next experiment MUST be a structural change (category A or B).
 Status: no plateau right now; you are free to choose.
-So far 12 of 12 experiments were structural.
+So far 14 of 14 experiments were structural.
 
 ## History of experiments (oldest first)
 - iter   0 | baseline | status=ok | val_acc=0.4677 | decision=baseline | wall=17.9 min
@@ -137,16 +137,27 @@ So far 12 of 12 experiments were structural.
     hypothesis: Scaling the anti-aliased backbone depth from ResNet-26 ([3, 3, 3, 3] blocks) to a CIFAR-adapted ResNet-34 ([3, 4, 6, 3] basic blocks, 1.5x width, 768-dim features) will enhance semantic representation capacity and feature hierarchy—especially at the critical 8x8 spatial resolution in stage 3 (6 blocks)—improving linear evaluation top-1 accuracy under Decoupled Contrastive Loss (DCL).
     change: Upgraded backbone architecture from CIFARResNet26AntiAliased ([3, 3, 3, 3]) to CIFARResNet34AntiAliased ([3, 4, 6, 3] basic blocks, 1.5x width, 768-dim output). Retained BlurPool anti-aliasing, 4096-wide projection head, DCL loss (tau=0.10), and detail-preserving augmentations.
     feedback: REJECTED: val_acc 0.6134 <= best 0.6144 (-0.10 pts). Best code kept.
+- iter  15 | candidate | status=ok | val_acc=0.5799 | decision=rejected | wall=45.5 min | change_type=structural
+    hypothesis: Positioning BlurPool anti-aliasing filtering immediately after ReLU non-linearities suppresses high-frequency non-linear aliasing harmonics, while integrating non-reduction Efficient Channel Attention (ECA) and enforcing a semantic minimum crop scale of 0.15 will enhance feature representation quality under Decoupled Contrastive Learning (DCL).
+    change: 1. Upgraded AntiAliasedBasicBlock to perform BlurPool anti-aliased filtering post-ReLU (after non-linear activation) and integrated an ECALayer (Efficient Channel Attention) into every block.
+2. Refined get_augmentation() to use scale=(0.15, 1.0) for RandomResizedCrop and removed Gaussian blur to prevent semantic degradation on low-resolution 32x32 images.
+3. Retained Decoupled Contrastive Loss (DCL, tau=0.10), 1.5x wider ResNet-26 backbone (768-dim features), 4096-wide projection head, and standard pretraining schedule.
+    feedback: REJECTED: val_acc 0.5799 <= best 0.6144 (-3.44 pts). Best code kept.
+- iter  16 | candidate | status=ok | val_acc=0.6200 | decision=accepted | wall=41.5 min | change_type=structural
+    hypothesis: Combining sample-level contrastive repulsion (Decoupled Contrastive Loss) with feature-level dimension decorrelation (Barlow Twins cross-correlation penalty) prevents both sample representation collapse and dimensional redundancy, enabling richer feature utilization across the 2048 projection channels.
+    change: 1. Updated BarlowTwinsLoss to implement a joint DCL + Barlow Twins Feature Decorrelation loss: computes DCL contrastive loss (tau=0.10) alongside batch-normalized cross-correlation matrix penalty (on-diagonal alignment + lambda_param off-diagonal decorrelation).
+2. Maintained the best-performing anti-aliased ResNet-26 backbone (1.5x width, 768-dim features), 4096-wide 3-layer projection head, and detail-preserving CIFAR-100 augmentations from iter 12.
+    feedback: ACCEPTED: val_acc 0.6200 > best 0.6144 (+0.56 pts). Now the best.
 
 <current_best_algorithm>
 ```python
 """
-Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL)
-with Anti-Aliased CIFAR-ResNet-26 Backbone and Expanded Projection Head.
+Self-supervised learning algorithm: Joint Decoupled Contrastive Learning (DCL)
+and Barlow Twins Feature Decorrelation Loss with Anti-Aliased ResNet-26 Backbone.
 
-Integrates BlurPool anti-aliased downsampling into a 1.5x wider ResNet-26
-backbone ([3, 3, 3, 3] basic blocks, 768-dim features) paired with a 4096-wide
-projection head and detail-preserving augmentations for CIFAR-100.
+Combines sample-level instance discrimination (DCL) with channel-level feature
+decorrelation (Barlow Twins cross-correlation penalty) on an anti-aliased 1.5x
+ResNet-26 backbone ([3, 3, 3, 3] blocks, 768-dim features) and 4096-wide projection head.
 """
 import math
 import torch
@@ -157,51 +168,68 @@ import torchvision.transforms as transforms
 
 class BarlowTwinsLoss(nn.Module):
     """
-    Decoupled Contrastive Loss (DCL) implemented inside the BarlowTwinsLoss wrapper.
+    Joint Sample-Dimensional Objective: Decoupled Contrastive Loss (DCL)
+    plus Barlow Twins Feature Decorrelation Regularization.
 
-    DCL removes positive similarity from the loss denominator, preventing high positive
-    alignment from dampening its own gradient during optimization.
+    - DCL ensures sample-level repulsion without positive dampening.
+    - Barlow Twins decorrelation forces projection dimensions to be orthogonal,
+      maximizing channel-wise feature entropy and representation rank.
     """
 
-    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10):
+    def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10, bt_weight=0.5):
         super().__init__()
         self.temperature = temperature
+        self.lambda_param = lambda_param
+        self.embedding_dim = embedding_dim
+        self.bt_weight = bt_weight
 
     def forward(self, z1, z2):
         batch_size = z1.shape[0]
 
-        # L2-normalize projection vectors
+        # -------------------------------------------------------------
+        # 1. Decoupled Contrastive Loss (Sample-level uniformity)
+        # -------------------------------------------------------------
         z1_norm = F.normalize(z1, dim=1)
         z2_norm = F.normalize(z2, dim=1)
 
-        # Concatenate projections: shape [2 * batch_size, embedding_dim]
         z = torch.cat([z1_norm, z2_norm], dim=0)
-
-        # Cosine similarity matrix scaled by temperature
         sim = torch.matmul(z, z.T) / self.temperature
 
-        # Extract positive pair similarities
         pos_sim = torch.cat([
             torch.diag(sim, batch_size),
             torch.diag(sim, -batch_size)
-        ], dim=0)  # shape [2 * batch_size]
+        ], dim=0)
 
-        # Mask out self-similarity (diagonal) and positive pair similarity
         mask_self = torch.eye(2 * batch_size, dtype=torch.bool, device=z.device)
         mask_pos = torch.zeros((2 * batch_size, 2 * batch_size), dtype=torch.bool, device=z.device)
         mask_pos[:batch_size, batch_size:] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
         mask_pos[batch_size:, :batch_size] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
 
         mask_neg = ~(mask_self | mask_pos)
-
-        # Mask non-negative entries with large negative value for logsumexp
         sim_neg = sim.masked_fill(~mask_neg, -1e9)
-
-        # Decoupled contrastive loss: - pos_sim + logsumexp(neg_sim)
         neg_logsumexp = torch.logsumexp(sim_neg, dim=1)
-        loss = (-pos_sim + neg_logsumexp).mean()
 
-        return loss
+        dcl_loss = (-pos_sim + neg_logsumexp).mean()
+
+        # -------------------------------------------------------------
+        # 2. Barlow Twins Feature Decorrelation (Channel-level independence)
+        # -------------------------------------------------------------
+        z1_bn = (z1 - z1.mean(dim=0)) / (z1.std(dim=0) + 1e-5)
+        z2_bn = (z2 - z2.mean(dim=0)) / (z2.std(dim=0) + 1e-5)
+
+        c = torch.matmul(z1_bn.T, z2_bn) / batch_size
+
+        on_diag = (torch.diagonal(c) - 1.0).pow(2).sum()
+        off_diag_mask = ~torch.eye(self.embedding_dim, dtype=torch.bool, device=z.device)
+        off_diag = (c[off_diag_mask]).pow(2).sum()
+
+        bt_loss = (on_diag + self.lambda_param * off_diag) / self.embedding_dim
+
+        # -------------------------------------------------------------
+        # Joint Objective
+        # -------------------------------------------------------------
+        total_loss = dcl_loss + self.bt_weight * bt_loss
+        return total_loss
 
 
 class BlurPool2d(nn.Module):

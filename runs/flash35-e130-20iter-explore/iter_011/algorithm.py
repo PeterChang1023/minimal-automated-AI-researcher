@@ -1,11 +1,10 @@
 """
-Self-supervised learning algorithm: Decoupled Contrastive Learning (DCL)
-with Anti-Aliased CIFAR-ResNet-22 Backbone.
+Self-supervised learning algorithm: Predictor-Decoupled Contrastive Learning (P-DCL)
+with Anti-Aliased CIFAR-ResNet-26 Backbone and Asymmetric Prediction Head.
 
-Integrates BlurPool anti-aliased downsampling into a deeper 1.5x wider ResNet-22
-backbone ([2, 3, 3, 2] basic blocks, 768-dim features). Anti-aliasing enforces
-translation equivariance under spatial crop augmentations on 32x32 CIFAR-100 images,
-enhancing positive-pair feature alignment in DCL pretraining.
+Integrates a bottleneck Predictor MLP with stop-gradient target representations into
+Decoupled Contrastive Learning (DCL) on an anti-aliased CIFAR ResNet-26 backbone
+(1.5x width multiplier, 768-dim features) for CIFAR-100 representation learning.
 """
 import math
 import torch
@@ -16,10 +15,10 @@ import torchvision.transforms as transforms
 
 class BarlowTwinsLoss(nn.Module):
     """
-    Decoupled Contrastive Loss (DCL) implemented inside the BarlowTwinsLoss wrapper.
-    
-    DCL removes positive similarity from the loss denominator, preventing high positive
-    alignment from dampening its own gradient during optimization.
+    Predictor-Decoupled Contrastive Loss (P-DCL) with stop-gradient targets.
+
+    Splits input projection vectors into predictions p [B, 1024] and target projections t [B, 1024].
+    Computes asymmetric contrastive loss predicting detached target representations across views.
     """
 
     def __init__(self, lambda_param=5e-3, embedding_dim=2048, temperature=0.10):
@@ -29,38 +28,46 @@ class BarlowTwinsLoss(nn.Module):
     def forward(self, z1, z2):
         batch_size = z1.shape[0]
 
-        # L2-normalize projection vectors
-        z1_norm = F.normalize(z1, dim=1)
-        z2_norm = F.normalize(z2, dim=1)
+        # Split predictions (first 1024) and targets (last 1024)
+        p1, t1 = z1[:, :1024], z1[:, 1024:]
+        p2, t2 = z2[:, :1024], z2[:, 1024:]
 
-        # Concatenate projections: shape [2 * batch_size, embedding_dim]
-        z = torch.cat([z1_norm, z2_norm], dim=0)
+        # L2-normalize predictions and detached targets
+        p1_norm = F.normalize(p1, dim=1)
+        p2_norm = F.normalize(p2, dim=1)
+        t1_norm = F.normalize(t1.detach(), dim=1)
+        t2_norm = F.normalize(t2.detach(), dim=1)
 
-        # Cosine similarity matrix scaled by temperature
-        sim = torch.matmul(z, z.T) / self.temperature
+        # Concatenate target projections: shape [2 * batch_size, 1024]
+        t_all = torch.cat([t1_norm, t2_norm], dim=0)
 
-        # Extract positive pair similarities
-        pos_sim = torch.cat([
-            torch.diag(sim, batch_size),
-            torch.diag(sim, -batch_size)
-        ], dim=0)  # shape [2 * batch_size]
+        # Device handle
+        dev = z1.device
+        arange_b = torch.arange(batch_size, device=dev)
 
-        # Mask out self-similarity (diagonal) and positive pair similarity
-        mask_self = torch.eye(2 * batch_size, dtype=torch.bool, device=z.device)
-        mask_pos = torch.zeros((2 * batch_size, 2 * batch_size), dtype=torch.bool, device=z.device)
-        mask_pos[:batch_size, batch_size:] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
-        mask_pos[batch_size:, :batch_size] = torch.eye(batch_size, dtype=torch.bool, device=z.device)
+        # --- View 1 predicts View 2 target (p1 -> t2.detach()) ---
+        sim1 = torch.matmul(p1_norm, t_all.T) / self.temperature  # [batch_size, 2 * batch_size]
+        pos_sim1 = sim1[arange_b, arange_b + batch_size]
 
-        mask_neg = ~(mask_self | mask_pos)
+        mask1 = torch.ones((batch_size, 2 * batch_size), dtype=torch.bool, device=dev)
+        mask1[arange_b, arange_b] = False              # mask out t1_i
+        mask1[arange_b, arange_b + batch_size] = False # mask out t2_i
 
-        # Mask non-negative entries with large negative value for logsumexp
-        sim_neg = sim.masked_fill(~mask_neg, -1e9)
+        sim1_neg = sim1.masked_fill(~mask1, -1e9)
+        loss1 = (-pos_sim1 + torch.logsumexp(sim1_neg, dim=1)).mean()
 
-        # Decoupled contrastive loss: - pos_sim + logsumexp(neg_sim)
-        neg_logsumexp = torch.logsumexp(sim_neg, dim=1)
-        loss = (-pos_sim + neg_logsumexp).mean()
+        # --- View 2 predicts View 1 target (p2 -> t1.detach()) ---
+        sim2 = torch.matmul(p2_norm, t_all.T) / self.temperature  # [batch_size, 2 * batch_size]
+        pos_sim2 = sim2[arange_b, arange_b]
 
-        return loss
+        mask2 = torch.ones((batch_size, 2 * batch_size), dtype=torch.bool, device=dev)
+        mask2[arange_b, arange_b] = False              # mask out t1_i
+        mask2[arange_b, arange_b + batch_size] = False # mask out t2_i
+
+        sim2_neg = sim2.masked_fill(~mask2, -1e9)
+        loss2 = (-pos_sim2 + torch.logsumexp(sim2_neg, dim=1)).mean()
+
+        return 0.5 * (loss1 + loss2)
 
 
 class BlurPool2d(nn.Module):
@@ -125,9 +132,9 @@ class AntiAliasedBasicBlock(nn.Module):
         return out
 
 
-class CIFARResNet22AntiAliased(nn.Module):
+class CIFARResNet26AntiAliased(nn.Module):
     """
-    CIFAR-adapted ResNet-22 ([2, 3, 3, 2] blocks) with 1.5x width multiplier
+    CIFAR-adapted ResNet-26 ([3, 3, 3, 3] basic blocks) with 1.5x width multiplier
     (channels [96, 192, 384, 768]) and anti-aliased downsampling.
     """
 
@@ -140,11 +147,11 @@ class CIFARResNet22AntiAliased(nn.Module):
         self.conv1 = nn.Conv2d(3, base_channels[0], kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(base_channels[0])
 
-        # Layer depths: [2, 3, 3, 2] = ResNet-22
-        self.layer1 = self._make_layer(AntiAliasedBasicBlock, base_channels[0], 2, stride=1)
+        # Layer depths: [3, 3, 3, 3] = ResNet-26
+        self.layer1 = self._make_layer(AntiAliasedBasicBlock, base_channels[0], 3, stride=1)
         self.layer2 = self._make_layer(AntiAliasedBasicBlock, base_channels[1], 3, stride=2)
         self.layer3 = self._make_layer(AntiAliasedBasicBlock, base_channels[2], 3, stride=2)
-        self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 2, stride=2)
+        self.layer4 = self._make_layer(AntiAliasedBasicBlock, base_channels[3], 3, stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -167,18 +174,34 @@ class CIFARResNet22AntiAliased(nn.Module):
 
 
 class ProjectionHead(nn.Module):
-    """3-layer projection head."""
+    """3-layer projection head mapping backbone features (768) to target embeddings (1024)."""
 
-    def __init__(self, input_dim=768, hidden_dim=2048, output_dim=2048):
+    def __init__(self, input_dim=768, hidden_dim=2048, output_dim=1024):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
+            nn.Linear(input_dim, hidden_dim, bias=False),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim, bias=False),
             nn.BatchNorm1d(hidden_dim),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden_dim, output_dim),
+            nn.Linear(hidden_dim, output_dim, bias=True),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class PredictorHead(nn.Module):
+    """2-layer bottleneck predictor MLP mapping targets (1024) to predictions (1024)."""
+
+    def __init__(self, in_dim=1024, hidden_dim=512, out_dim=1024):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, hidden_dim, bias=False),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_dim, out_dim, bias=True),
         )
 
     def forward(self, x):
@@ -186,23 +209,32 @@ class ProjectionHead(nn.Module):
 
 
 class BarlowTwinsModel(nn.Module):
-    """CIFAR ResNet-22 Anti-Aliased backbone + 3-layer projection head."""
+    """
+    CIFAR ResNet-26 Anti-Aliased backbone with asymmetric Predictor + Target Projection heads.
 
-    def __init__(self, proj_hidden_dim=2048, proj_output_dim=2048):
+    Returns:
+        features: [B, 768] backbone features for linear probe evaluation.
+        projections: [B, 2048] concatenated [prediction (1024) | target (1024)] vectors.
+    """
+
+    def __init__(self, proj_hidden_dim=2048, target_dim=1024, pred_hidden_dim=512):
         super().__init__()
-        self.backbone = CIFARResNet22AntiAliased(width_mult=1.5)
+        self.backbone = CIFARResNet26AntiAliased(width_mult=1.5)
         self.backbone_dim = 768
-        self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, proj_output_dim)
+        self.projector = ProjectionHead(self.backbone_dim, proj_hidden_dim, target_dim)
+        self.predictor = PredictorHead(target_dim, pred_hidden_dim, target_dim)
 
     def forward(self, x):
         features = self.backbone(x)
-        projections = self.projector(features)
+        targets = self.projector(features)
+        preds = self.predictor(targets)
+        projections = torch.cat([preds, targets], dim=1)  # shape [B, 2048]
         return features, projections
 
 
 def get_model():
-    """Return model instance with anti-aliased wider ResNet backbone."""
-    return BarlowTwinsModel(proj_hidden_dim=2048, proj_output_dim=2048)
+    """Return model instance with anti-aliased ResNet-26 backbone and asymmetric predictor head."""
+    return BarlowTwinsModel(proj_hidden_dim=2048, target_dim=1024, pred_hidden_dim=512)
 
 
 def get_training_config():
@@ -220,7 +252,7 @@ def get_training_config():
 
 
 def get_augmentation():
-    """Return CIFAR-100 augmentation pipeline for DCL contrastive pretraining."""
+    """Return detail-preserving augmentation pipeline for 32x32 CIFAR-100 images."""
     mean = (0.5071, 0.4867, 0.4408)
     std = (0.2675, 0.2565, 0.2761)
 
@@ -229,7 +261,7 @@ def get_augmentation():
         transforms.RandomHorizontalFlip(),
         transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
         transforms.RandomGrayscale(p=0.2),
-        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.5),
+        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 1.0))], p=0.15),
         transforms.ToTensor(),
         transforms.Normalize(mean, std),
     ])

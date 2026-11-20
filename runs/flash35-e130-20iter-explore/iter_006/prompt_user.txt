@@ -58,13 +58,13 @@ Categories A and B are STRUCTURAL changes; C-E are TUNING.
 ## Scores and compute under this budget
 - baseline val acc: 0.4677
 - current best val acc: 0.5988 (iter 3)
-- per-experiment time limit: 60.0 min. Measured wall-clock of completed runs: last 33.6 min, max 33.6 min (pretrain + linear eval) -> about 26 min of headroom (56% of the limit used). Heavier methods (bigger backbone, momentum encoder, extra heads) are affordable if they stay inside the limit; a timeout counts as a failed experiment.
+- per-experiment time limit: 60.0 min. Measured wall-clock of completed runs: last 24.3 min, max 33.6 min (pretrain + linear eval) -> about 26 min of headroom (56% of the limit used). Heavier methods (bigger backbone, momentum encoder, extra heads) are affordable if they stay inside the limit; a timeout counts as a failed experiment.
 - acceptance rule (program-checked): a candidate replaces the best only if it runs successfully and its val acc is STRICTLY higher than the current best.
 
 ## Plateau rule (detected by the program)
 If the last 3 experiments all landed within +/-1.2 pts of the best, the next experiment MUST be a structural change (category A or B).
 Status: no plateau right now; you are free to choose.
-So far 4 of 5 experiments were structural.
+So far 5 of 6 experiments were structural.
 
 ## History of experiments (oldest first)
 - iter   0 | baseline | status=ok | val_acc=0.4677 | decision=baseline | wall=17.9 min
@@ -96,6 +96,13 @@ So far 4 of 5 experiments were structural.
     hypothesis: -
     change: -
     feedback: FAILED before execution: LLM call failed: gemini failed after 3 attempts: HTTP 503: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.. Reply with the two required fenced blocks.
+- iter   6 | candidate | status=ok | val_acc=0.4098 | decision=rejected | wall=24.3 min | change_type=structural
+    hypothesis: Upgrading to a deeper CIFAR-adapted ResNet-34 backbone ([3,4,6,3] blocks) with final-layer BatchNorm in the projection head, a sharper DCL temperature (tau=0.08), and mild solarization augmentation will significantly improve feature representations for 100-class CIFAR-100 evaluation under a 130-epoch budget.
+    change: 1. Replaced ResNet-18 backbone with CIFAR-adapted ResNet-34 (depths [3, 4, 6, 3], base channels [64, 128, 256, 512], backbone_dim=512).
+2. Added BatchNorm1d to the output of ProjectionHead to standardize projections before L2 normalization.
+3. Lowered DCL temperature parameter tau from 0.10 to 0.08.
+4. Added RandomSolarize(threshold=128, p=0.15) and reduced GaussianBlur probability to 0.3 in augmentation pipeline.
+    feedback: REJECTED: val_acc 0.4098 <= best 0.5988 (-18.90 pts). Best code kept.
 
 <current_best_algorithm>
 ```python
