@@ -14,7 +14,7 @@
   "13": "BYOL 風格：predictor + stop-gradient（不對稱），47.27%，掉 14 pt；跟原本 DCL 的組合沒學起來。",
   "14": "加深到 ResNet-34（仍 1.5 倍寬），−0.10 pt，在雜訊內；再加深已經沒有幫助。",
   "15": "block 內加 ECA attention、BlurPool 移到 ReLU 後、拿掉 blur，−3.45 pt。",
-  "16": "架構不動，loss 改成 DCL + Barlow Twins 去相關項（bt_weight 0.5），+0.56 pt，在雜訊內。主 run iter 7 同一個想法崩到 6.36%，這次有 BN 標準化與權重，能正常訓練。",
+  "16": "架構不動，loss 改成 DCL + Barlow Twins 去相關項（bt_weight 0.5），+0.56 pt，在雜訊內。主 run iter 7 同一個想法崩到 6.36%：兩種 loss 量級差約 70 倍，去相關（非對角）訊號蓋過 InfoNCE 訊號（根據 loss 大小推論，沒做消融）。這次有 BN 標準化並調了權重，能正常訓練。",
   "17": "去相關擴到三個矩陣（跨 view 與各自 view 內），−0.70 pt，在雜訊內。",
   "19": "把 backbone 特徵和 head 輸出串起來做雙空間去相關，−0.17 pt，在雜訊內。",
   "20": "把 stage 3（384 維）和 stage 4（768 維）的特徵串起來給 linear probe（1152 維），+4.2 pt。注意：encoder 幾乎沒變大，是 linear probe 拿到更多、更低層的特徵；probe 本身仍是一層 Linear，合規但不等於表徵變好。",

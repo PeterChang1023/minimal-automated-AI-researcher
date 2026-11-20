@@ -10,8 +10,9 @@ executed experiments. Iterations 0–12 are copied unchanged from that run.
   took 51.5 min, so all kept runs would also fit the old 60-min limit.
 * **Removed iterations** (`scripts/drop_failed_iters.py --status llm_error,timeout`): every Gemini
   call failure (503 high demand, 429 free-tier daily quota, 402 on a billing-enabled key) and one
-  first attempt at iteration 13 (ECA attention) that exceeded the 60-min limit. Numbering therefore
-  skips 5, 8, 18 and 21. One aborted start (API key variable set to a placeholder; no request sent)
+  first attempt at iteration 13 that exceeded the 60-min limit. 20 experiments were actually run.
+  The LLM failed 4 times (iterations 5, 8, 18, 21: no training), so numbering skips those and runs to 24;
+  iteration 13 was re-run after the limit was raised and keeps its number. 8 iterations were accepted. One aborted start (API key variable set to a placeholder; no request sent)
   and the final next-proposal call (503) were removed from the log. Raw logs and backups are on hinton
   (`~/air_backups/`, `explore20_raw.tgz`).
 * **API keys:** free tier (20 requests/day, retries count); free keys of several Google accounts.
